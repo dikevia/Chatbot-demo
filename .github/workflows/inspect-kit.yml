@@ -12,26 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract and print chatbot integration points
+      - name: Extract targeted AI and retrieval integration points
         shell: bash
         run: |
           python - <<'PY'
           from zipfile import ZipFile
           from pathlib import Path
           archive = next(Path(".").glob("*.zip"))
+          targets = {
+              "orchestrator.py": 15000,
+              "config.py": 9000,
+              "test_ai_provider.py": 12000,
+              "test_chatbot_v1_smoke.py": 10000,
+          }
           with ZipFile(archive) as z:
-              names = z.namelist()
-              print("=== SOURCE FILES ===")
-              for n in names:
-                  if n.endswith((".py", "requirements.txt")) and (
-                      "/app/" in n or "/backend/" in n or n.endswith("requirements.txt")
-                  ):
-                      print(n)
-              wanted = ("orchestrator.py", "ai_provider.py", "main.py", "config.py", "schemas.py", "requirements.txt")
-              for n in names:
-                  if n.endswith(wanted):
+              for suffix, limit in targets.items():
+                  matches = [n for n in z.namelist() if n.endswith(suffix)]
+                  for n in matches:
                       data = z.read(n).decode("utf-8", errors="replace")
-                      print(f"\\n===== BEGIN {n} ({len(data)} chars) =====")
-                      print(data[:30000])
+                      part = data[-limit:] if suffix in {"orchestrator.py", "config.py"} else data[:limit]
+                      print(f"===== {n} chars={len(data)} excerpt={len(part)} =====")
+                      print(part)
                       print(f"===== END {n} =====")
           PY
