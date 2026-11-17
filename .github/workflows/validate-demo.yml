@@ -64,6 +64,19 @@ jobs:
             exit 1
           fi
 
+          home_status=$(curl --silent --output /tmp/dikevia-home.html --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/ || true)
+          app_js_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/app.js || true)
+          app_css_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/app.css || true)
+          if [ "$home_status" != "200" ] || [ "$app_js_status" != "200" ] || [ "$app_css_status" != "200" ]; then
+            echo "Interface web incomplète : accueil=$home_status, app.js=$app_js_status, app.css=$app_css_status."
+            exit 1
+          fi
+          grep -q 'Dikevia' /tmp/dikevia-home.html
+          echo "OK : page d'accueil, JavaScript et CSS accessibles."
+
           render_health_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8000/_render-health || true)
           if [ "$render_health_status" != "200" ]; then
