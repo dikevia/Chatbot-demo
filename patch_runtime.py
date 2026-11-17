@@ -228,26 +228,25 @@ if old_no_verified in source:
 elif "ai_answer = await _dikevia_general_ai_orientation(" not in source:
     raise RuntimeError("Branche sans source IA vérifiée introuvable.")
 
-old_answer = '''        if ai_answer:
-            answer = (ai_answer + "\\\\n\\\\n---\\\\nStatut : analyse assistée à partir des sources affichées. "
-                "Les extraits du snapshot PDF ne certifient pas l'authenticité officielle. Les versions du corpus dont les dates d'effet sont incomplètes ne sont pas utilisées pour les conclusions IA. Les actes locaux restent à vérifier. Une validation juridique humaine reste nécessaire.")
-        else:'''
-new_answer = '''        if ai_answer and ai_triage_mode:
+answer_start = source.find("        if ai_answer:\\n            answer = (ai_answer + ")
+answer_end = source.find("        else:\\n            lines =", answer_start)
+if answer_start < 0 or answer_end < 0:
+    if "if ai_answer and ai_triage_mode:" not in source:
+        raise RuntimeError("Assemblage de la réponse IA introuvable.")
+else:
+    answer_block = '''        if ai_answer and ai_triage_mode:
             answer = (
                 "Orientation générale et pratique — non juridique, non vérifiée. "
-                "Aucune source juridique officielle datée et exploitable n'a été transmise à l'IA.\\\\n\\\\n"
+                "Aucune source juridique officielle datée et exploitable n'a été transmise à l'IA.\\n\\n"
                 + ai_answer
-                + "\\\\n\\\\nCette orientation ne constitue pas une analyse juridique. "
+                + "\\n\\nCette orientation ne constitue pas une analyse juridique. "
                 "Vérifier les faits et les sources officielles avant toute décision."
             )
         elif ai_answer:
-            answer = (ai_answer + "\\\\n\\\\n---\\\\nStatut : analyse assistée à partir des sources affichées. "
+            answer = (ai_answer + "\\n\\n---\\nStatut : analyse assistée à partir des sources affichées. "
                 "Les extraits du snapshot PDF ne certifient pas l'authenticité officielle. Les versions du corpus dont les dates d'effet sont incomplètes ne sont pas utilisées pour les conclusions IA. Les actes locaux restent à vérifier. Une validation juridique humaine reste nécessaire.")
-        else:'''
-if old_answer in source:
-    source = source.replace(old_answer, new_answer, 1)
-elif "if ai_answer and ai_triage_mode:" not in source:
-    raise RuntimeError("Assemblage de la réponse IA introuvable.")
+'''
+    source = source[:answer_start] + answer_block + source[answer_end:]
 
 orchestrator.write_text(source, encoding="utf-8")
 compile(source, str(orchestrator), "exec")
