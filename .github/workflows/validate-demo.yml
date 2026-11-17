@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  docker-build:
+  docker-build-and-smoke-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -19,3 +19,46 @@ jobs:
 
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
+
+      - name: Start container and verify access protection
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          container_id=$(docker run -d \
+            -p 8000:8000 \
+            -e DIKEVIA_DEMO_USER=ci-demo \
+            -e DIKEVIA_DEMO_PASSWORD=ci-only-password-12345678901234567890 \
+            dikevia-chatbot-demo:test)
+
+          cleanup() {
+            docker logs "$container_id" || true
+            docker rm -f "$container_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          authenticated_status=""
+          for attempt in $(seq 1 30); do
+            authenticated_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --user 'ci-demo:ci-only-password-12345678901234567890' \
+              http://127.0.0.1:8000/health || true)
+            if [ "$authenticated_status" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$authenticated_status" != "200" ]; then
+            echo "Le serveur ne répond pas correctement avec les identifiants de test."
+            exit 1
+          fi
+
+          unauthenticated_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8000/health || true)
+
+          if [ "$unauthenticated_status" != "401" ]; then
+            echo "Protection incorrecte : réponse attendue 401, reçue $unauthenticated_status."
+            exit 1
+          fi
+
+          echo "OK : serveur démarré, accès authentifié accepté, accès anonyme refusé."
