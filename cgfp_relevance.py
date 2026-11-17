@@ -7,6 +7,7 @@ uniquement à ordonner les documents à examiner. Aucun statut juridique n'est d
 from __future__ import annotations
 
 from typing import Any
+import re
 
 from .cgfp import get_cgfp_article, normalize, search_cgfp as lexical_search
 
@@ -175,7 +176,7 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
     safe_limit = max(1, min(int(limit), 20))
     base = lexical_search(query, limit=20)
     # An explicit article number is a direct lookup: do not rewrite or filter it.
-    if any(normalize(ref) in normalize(query) for ref in ("L ", "R ", "D ")):
+    if re.search(r"\b[LRD]\s*\d", query, re.IGNORECASE):
         return {**base, "results": base.get("results", [])[:safe_limit], "search_mode": "reference_directe"}
 
     topics = _matching_topics(query)
