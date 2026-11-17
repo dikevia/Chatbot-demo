@@ -86,7 +86,7 @@ Configurer dans Render :
 
 - `AI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`
 - `AI_API_KEY` : clé Gemini créée dans Google AI Studio (secret Render).
-- `AI_MODEL` : identifiant exact d'un modèle Flash disponible pour la clé et le projet Google (exemple à essayer : `gemini-3.8-flash`, selon la disponibilité de votre compte).
+- `AI_MODEL=gemini-3.8-flash` : modèle Flash stable recommandé au moment de cette mise à jour ; vérifier sa disponibilité dans Google AI Studio pour le projet associé à la clé.
 - `AI_TIMEOUT_SECONDS=25` (facultatif, valeur par défaut).
 
 Le serveur utilise l'interface OpenAI-compatible de Gemini. Si aucune source officielle datée n'est disponible, l'IA peut uniquement fournir une orientation pratique générale : elle ne doit pas citer de règle juridique ni présenter une conclusion de droit. Une analyse juridique contextualisée reste conditionnée à la date des faits et à des sources vérifiées.
