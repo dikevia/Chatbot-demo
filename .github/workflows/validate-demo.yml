@@ -20,6 +20,11 @@ jobs:
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
 
+      - name: Verify the legal-search fallback patch is present
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'from pathlib import Path; p=Path("/app/backend/app/orchestrator.py"); s=p.read_text(encoding="utf-8"); compile(s, str(p), "exec"); assert "has_cgfp_snapshot" in s; assert "Dikévia ne formule donc pas" in s; assert "JURIS ne formule donc pas" not in s; print("OK : articles CGFP locaux conservés en résultats documentaires et nom Dikévia corrigé.")'
+
       - name: Verify the application refuses to start without secrets
         shell: bash
         run: |
