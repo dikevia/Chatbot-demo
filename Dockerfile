@@ -8,11 +8,14 @@ WORKDIR /app
 
 COPY *.zip /tmp/kit.zip
 COPY secure_main.py /tmp/secure_main.py
+COPY pwa /tmp/pwa
 
 RUN python -c "import zipfile; zipfile.ZipFile('/tmp/kit.zip').extractall('/tmp/kit')" \
  && cp -r /tmp/kit/Dikevia_Chatbot_V1_Kit_Developpeur/. /app/ \
  && cp /tmp/secure_main.py /app/backend/secure_main.py \
- && rm -rf /tmp/kit /tmp/kit.zip /tmp/secure_main.py
+ && cp /tmp/pwa/manifest.webmanifest /tmp/pwa/sw.js /tmp/pwa/icon.svg /app/frontend/ \
+ && python -c 'from pathlib import Path; p=Path("/app/frontend/index.html"); s=p.read_text(); s=s.replace("</head>", """<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#173b63"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dikevia"></head>""", 1); s=s.replace("</body>", """<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }</script></body>""", 1); p.write_text(s)' \
+ && rm -rf /tmp/kit /tmp/kit.zip /tmp/secure_main.py /tmp/pwa
 
 RUN pip install --no-cache-dir -r backend/requirements.txt \
  && useradd --create-home app \
