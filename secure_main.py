@@ -34,6 +34,22 @@ class BasicAuthGate:
             await self.app(scope, receive, send)
             return
 
+        # Render needs an unauthenticated HTTP 2xx health check. This endpoint
+        # reveals no application data and grants no access to chatbot routes.
+        if scope.get("path") == "/_render-health" and scope.get("method") == "GET":
+            body = b"ok"
+            await send({
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    (b"content-type", b"text/plain; charset=utf-8"),
+                    (b"content-length", str(len(body)).encode()),
+                    (b"cache-control", b"no-store"),
+                ],
+            })
+            await send({"type": "http.response.body", "body": body})
+            return
+
         headers = dict(scope.get("headers", []))
         authorization = headers.get(b"authorization", b"")
         valid = False
@@ -67,7 +83,7 @@ class BasicAuthGate:
 
 
 # Import only after the gate module is loaded; the gate wraps every HTTP route,
-# including the home page, health endpoint and chatbot API.
+# including the home page, the application health endpoint and the chatbot API.
 from dev_main import app as chatbot_app  # noqa: E402
 
 app = BasicAuthGate(chatbot_app)
