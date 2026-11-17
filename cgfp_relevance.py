@@ -181,11 +181,18 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
 
     topics = _matching_topics(query)
     if not topics:
+        # A generic word such as "travail" must not make dozens of unrelated
+        # CGFP articles look relevant. Keep only meaningful lexical matches;
+        # explicit article references were already handled above.
+        lexical_results = [
+            item for item in base.get("results", [])
+            if float(item.get("score", 0.0)) >= 1.0
+        ]
         return {
             **base,
             "results": [
-                {**item, "relevance_label": "Correspondance lexicale"}
-                for item in base.get("results", [])[:safe_limit]
+                {**item, "relevance_label": "Correspondance lexicale à confirmer"}
+                for item in lexical_results[:safe_limit]
             ],
             "search_mode": "lexical",
         }
