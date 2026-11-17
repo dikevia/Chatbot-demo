@@ -21,7 +21,7 @@ new_context = '''        # Never contaminate a new legal search with the previou
             "dans cette situation", "dans ce cas", "pour ces agents",
         ))
 '''
-old_search = "                found = search_cgfp(contextual_question, limit=8)\\n"
+old_search = "                found = search_cgfp(contextual_question, limit=8)" + chr(10)
 new_search = '''                found = search_cgfp(current_question, limit=8)
                 if not found.get("results") and is_explicit_follow_up and prior_user_questions:
                     found = search_cgfp(
