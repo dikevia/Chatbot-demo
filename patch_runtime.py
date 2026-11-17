@@ -5,7 +5,7 @@ orchestrator = ROOT / "backend/app/orchestrator.py"
 source = orchestrator.read_text(encoding="utf-8")
 source = source.replace(
     "from .cgfp import search_cgfp, get_cgfp_article",
-    "from .cgfp import get_cgfp_article\\nfrom .cgfp_relevance import search_cgfp",
+    "from .cgfp import get_cgfp_article\nfrom .cgfp_relevance import search_cgfp",
     1,
 )
 
