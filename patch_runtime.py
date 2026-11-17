@@ -3,6 +3,11 @@ from pathlib import Path
 ROOT = Path("/app")
 orchestrator = ROOT / "backend/app/orchestrator.py"
 source = orchestrator.read_text(encoding="utf-8")
+source = source.replace(
+    "from .cgfp import search_cgfp, get_cgfp_article",
+    "from .cgfp import get_cgfp_article\\nfrom .cgfp_relevance import search_cgfp",
+    1,
+)
 
 old_context = '''        contextual_question = current_question[:500]
         # A short follow-up may depend on the immediately preceding question,
@@ -10,45 +15,20 @@ old_context = '''        contextual_question = current_question[:500]
         if prior_user_questions and len(current_question) < 220:
             contextual_question = current_question[:350] + "\\n" + prior_user_questions[-1][:150]
 '''
-new_context = '''        # Never contaminate a new legal search with the previous question.
-        # Conversation context is used only for explicit short follow-ups, and
-        # then only as a fallback if the current wording returns no CGFP hit.
+new_context = '''        # A new question is always searched independently. History remains
+        # available to the assistant, but must never contaminate retrieval.
         contextual_question = current_question[:500]
-        lower_question = current_question.lower().lstrip()
-        is_explicit_follow_up = lower_question.startswith((
-            "et pour ", "et si ", "et dans ce cas", "qu en est-il", "qu'en est-il",
-            "et concernant ", "et pour les ", "et pour un ", "et pour une ",
-            "dans cette situation", "dans ce cas", "pour ces agents",
-        ))
 '''
 old_search = "                found = search_cgfp(contextual_question, limit=8)" + chr(10)
-new_search = '''                # Translate plain-language descriptions into legal search concepts.
-                # Avoid letting a common word such as "chef" dominate retrieval.
-                normalized = current_question.lower().replace("’", "'")
-                insult_terms = ("insult", "injur", "humili", "propos déplac", "propos blessant",
-                                "paroles blessant", "rabaisser", "rabaisse", "insultant")
-                if any(term in normalized for term in insult_terms):
-                    search_question = (
-                        "dignité respect de l'agent public protection fonctionnelle "
-                        "violences verbales propos humiliants harcèlement moral"
-                    )
-                else:
-                    search_question = current_question
-                found = search_cgfp(search_question, limit=8)
-                if not found.get("results") and is_explicit_follow_up and prior_user_questions:
-                    found = search_cgfp(
-                        search_question[:350] + "\\\\n" + prior_user_questions[-1][:150], limit=8
-                    )
-'''
+new_search = "                found = search_cgfp(current_question, limit=8)" + chr(10)
 if old_context in source:
     source = source.replace(old_context, new_context, 1)
 elif new_context not in source:
-    raise RuntimeError("Bloc de contexte de recherche introuvable ou déjà modifié de façon inattendue.")
-
+    raise RuntimeError("Bloc de contexte de recherche introuvable ou déjà modifié.")
 if old_search in source:
     source = source.replace(old_search, new_search, 1)
-elif "found = search_cgfp(current_question, limit=8)" not in source:
-    raise RuntimeError("Appel de recherche CGFP introuvable ou déjà modifié de façon inattendue.")
+elif new_search.strip() not in source:
+    raise RuntimeError("Appel de recherche CGFP introuvable ou déjà modifié.")
 
 old_gate = '''        if not any(s.get("source_type") in {"LEGIFRANCE_API", "LEGIFRANCE_LODA"} for s in sources) and not usable_permanent and not usable_local:
 '''
