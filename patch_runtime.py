@@ -67,16 +67,16 @@ source = source.replace(
     1,
 )
 
-warning_anchor = '''        missing = ["Vérifier les dates d'effet et la rédaction exacte applicable à la date des faits.",
-'''
 warning = '''        if has_cgfp_snapshot and not any(
             s.get("source_type") in {"LEGIFRANCE_API", "LEGIFRANCE_LODA"} for s in sources
         ):
             missing.insert(0, "Les articles affichés proviennent de l'index documentaire local du CGFP (snapshot daté du 31 octobre 2026). Ils servent au repérage et ne remplacent pas la vérification de la version officielle sur Légifrance à la date des faits.")
 
 '''
+warning_anchor = '''            "Vérifier les actes locaux, délibérations et accords applicables à l'employeur concerné."]
+'''
 if warning_anchor in source and warning not in source:
-    source = source.replace(warning_anchor, warning + warning_anchor, 1)
+    source = source.replace(warning_anchor, warning_anchor + warning, 1)
 elif warning not in source and "Les articles affichés proviennent de l'index documentaire local du CGFP" not in source:
     raise RuntimeError("Emplacement du message de prudence CGFP introuvable.")
 
