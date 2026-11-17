@@ -20,6 +20,17 @@ jobs:
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
 
+      - name: Verify the application refuses to start without secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker run --rm dikevia-chatbot-demo:test; then
+            echo "ERREUR : le serveur a démarré sans identifiants de démonstration."
+            exit 1
+          else
+            echo "OK : démarrage refusé en l'absence des identifiants requis."
+          fi
+
       - name: Start container and verify access protection
         shell: bash
         run: |
@@ -55,10 +66,16 @@ jobs:
 
           unauthenticated_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8000/health || true)
-
           if [ "$unauthenticated_status" != "401" ]; then
             echo "Protection incorrecte : réponse attendue 401, reçue $unauthenticated_status."
             exit 1
           fi
 
-          echo "OK : serveur démarré, accès authentifié accepté, accès anonyme refusé."
+          invalid_credentials_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --user 'ci-demo:wrong-password' http://127.0.0.1:8000/health || true)
+          if [ "$invalid_credentials_status" != "401" ]; then
+            echo "Protection incorrecte : mauvais mot de passe, réponse attendue 401, reçue $invalid_credentials_status."
+            exit 1
+          fi
+
+          echo "OK : serveur démarré, bons identifiants acceptés, accès anonyme et mauvais mot de passe refusés."
