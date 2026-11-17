@@ -228,8 +228,8 @@ if old_no_verified in source:
 elif "ai_answer = await _dikevia_general_ai_orientation(" not in source:
     raise RuntimeError("Branche sans source IA vérifiée introuvable.")
 
-answer_start = source.find("        if ai_answer:\\n            answer = (ai_answer + ")
-answer_end = source.find("        else:\\n            lines =", answer_start)
+answer_start = source.find("        if ai_answer:")
+answer_end = source.find("        else:", answer_start)
 if answer_start < 0 or answer_end < 0:
     if "if ai_answer and ai_triage_mode:" not in source:
         raise RuntimeError("Assemblage de la réponse IA introuvable.")
