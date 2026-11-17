@@ -76,13 +76,20 @@ jobs:
             --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/sw.js || true)
           icon_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/icon.svg || true)
-          if [ "$home_status" != "200" ] || [ "$app_js_status" != "200" ] || [ "$app_css_status" != "200" ] || [ "$manifest_status" != "200" ] || [ "$worker_status" != "200" ] || [ "$icon_status" != "200" ]; then
-            echo "Interface/PWA incomplète : accueil=$home_status, app.js=$app_js_status, app.css=$app_css_status, manifest=$manifest_status, sw=$worker_status, icône=$icon_status."
+          voice_js_status=$(curl --silent --output /tmp/dikevia-voice.js --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/voice.js || true)
+          voice_css_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/voice.css || true)
+          if [ "$home_status" != "200" ] || [ "$app_js_status" != "200" ] || [ "$app_css_status" != "200" ] || [ "$manifest_status" != "200" ] || [ "$worker_status" != "200" ] || [ "$icon_status" != "200" ] || [ "$voice_js_status" != "200" ] || [ "$voice_css_status" != "200" ]; then
+            echo "Interface/PWA incomplète : accueil=$home_status, app.js=$app_js_status, app.css=$app_css_status, manifest=$manifest_status, sw=$worker_status, icône=$icon_status, voix JS=$voice_js_status, voix CSS=$voice_css_status."
             exit 1
           fi
           grep -q 'Dikevia' /tmp/dikevia-home.html
+          grep -q 'voice.js' /tmp/dikevia-home.html
+          grep -q 'speechSynthesis' /tmp/dikevia-voice.js
+          grep -q 'SpeechRecognition' /tmp/dikevia-voice.js
           grep -q '"display": "standalone"' /tmp/dikevia-manifest.json
-          echo "OK : interface web et ressources PWA accessibles."
+          echo "OK : interface web, installation PWA et fonctions vocales accessibles."
 
           render_health_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8000/_render-health || true)
