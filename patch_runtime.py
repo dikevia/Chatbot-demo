@@ -22,10 +22,22 @@ new_context = '''        # Never contaminate a new legal search with the previou
         ))
 '''
 old_search = "                found = search_cgfp(contextual_question, limit=8)" + chr(10)
-new_search = '''                found = search_cgfp(current_question, limit=8)
+new_search = '''                # Translate plain-language descriptions into legal search concepts.
+                # Avoid letting a common word such as "chef" dominate retrieval.
+                normalized = current_question.lower().replace("’", "'")
+                insult_terms = ("insult", "injur", "humili", "propos déplac", "propos blessant",
+                                "paroles blessant", "rabaisser", "rabaisse", "insultant")
+                if any(term in normalized for term in insult_terms):
+                    search_question = (
+                        "dignité respect de l'agent public protection fonctionnelle "
+                        "violences verbales propos humiliants harcèlement moral"
+                    )
+                else:
+                    search_question = current_question
+                found = search_cgfp(search_question, limit=8)
                 if not found.get("results") and is_explicit_follow_up and prior_user_questions:
                     found = search_cgfp(
-                        current_question[:350] + "\\n" + prior_user_questions[-1][:150], limit=8
+                        search_question[:350] + "\\\\n" + prior_user_questions[-1][:150], limit=8
                     )
 '''
 if old_context in source:
