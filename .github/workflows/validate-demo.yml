@@ -64,6 +64,13 @@ jobs:
             exit 1
           fi
 
+          render_health_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8000/_render-health || true)
+          if [ "$render_health_status" != "200" ]; then
+            echo "Route de santé Render incorrecte : réponse attendue 200, reçue $render_health_status."
+            exit 1
+          fi
+
           unauthenticated_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8000/health || true)
           if [ "$unauthenticated_status" != "401" ]; then
@@ -78,4 +85,4 @@ jobs:
             exit 1
           fi
 
-          echo "OK : serveur démarré, bons identifiants acceptés, accès anonyme et mauvais mot de passe refusés."
+          echo "OK : démarrage sécurisé, santé Render publique sans données, bons identifiants acceptés, accès anonyme et mauvais mot de passe refusés."
