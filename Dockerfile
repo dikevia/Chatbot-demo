@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY *.zip /tmp/kit.zip
 COPY secure_main.py /tmp/secure_main.py
+COPY patch_runtime.py /tmp/patch_runtime.py
 COPY pwa /tmp/pwa
 
 RUN python -c "import zipfile; zipfile.ZipFile('/tmp/kit.zip').extractall('/tmp/kit')" \
@@ -15,9 +16,8 @@ RUN python -c "import zipfile; zipfile.ZipFile('/tmp/kit.zip').extractall('/tmp/
  && cp /tmp/secure_main.py /app/backend/secure_main.py \
  && cp /tmp/pwa/* /app/frontend/ \
  && python -c 'from pathlib import Path; p=Path("/app/frontend/index.html"); s=p.read_text(); s=s.replace("</head>", """<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/voice.css"><meta name="theme-color" content="#173b63"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dikevia"></head>""", 1); s=s.replace("""<script src="app.js"></script>""", """<script src="app.js"></script><script src="voice.js"></script>""", 1); s=s.replace("</body>", """<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }</script></body>""", 1); p.write_text(s)' \
- && python -c 'from pathlib import Path; p=Path("/app/backend/app/orchestrator.py"); s=p.read_text(); old="JURIS ne formule donc pas de conclusion juridique."; new="Dikévia ne formule donc pas de conclusion juridique."; assert old in s, "Texte de marque attendu introuvable"; p.write_text(s.replace(old,new,1)); h=Path("/app/frontend/index.html"); x=h.read_text().replace("Dikevia","Dikévia"); h.write_text(x); m=Path("/app/frontend/manifest.webmanifest"); y=m.read_text().replace("Dikevia","Dikévia"); m.write_text(y)' \
- && python -c 'from pathlib import Path; p=Path("/app/backend/app/orchestrator.py"); s=p.read_text(); old="        contextual_question = current_question[:500]\n        # A short follow-up may depend on the immediately preceding question,\n        # but older exchanges must never displace the current request.\n        if prior_user_questions and len(current_question) < 220:\n            contextual_question = current_question[:350] + \"\\\\n\" + prior_user_questions[-1][:150]\n"; new="        # Never contaminate a new legal search with the previous question.\n        # Conversation context is used only for explicit short follow-ups, and\n        # then only as a fallback if the current wording returns no CGFP hit.\n        contextual_question = current_question[:500]\n        lower_question = current_question.lower().lstrip()\n        is_explicit_follow_up = lower_question.startswith((\n            \"et pour \", \"et si \", \"et dans ce cas\", \"qu en est-il\", \"qu\\u0027en est-il\",\n            \"et concernant \", \"et pour les \", \"et pour un \", \"et pour une \",\n            \"dans cette situation\", \"dans ce cas\", \"pour ces agents\",\n        ))\n"; assert old in s, "Bloc de contexte de recherche introuvable"; s=s.replace(old,new,1); old2="                found = search_cgfp(contextual_question, limit=8)\n"; new2="                found = search_cgfp(current_question, limit=8)\n                if not found.get(\"results\") and is_explicit_follow_up and prior_user_questions:\n                    found = search_cgfp(\n                        current_question[:350] + \"\\\\n\" + prior_user_questions[-1][:150], limit=8\n                    )\n"; assert old2 in s, "Appel de recherche CGFP introuvable"; s=s.replace(old2,new2,1); p.write_text(s)' \
- && rm -rf /tmp/kit /tmp/kit.zip /tmp/secure_main.py /tmp/pwa
+ && python /tmp/patch_runtime.py \
+ && rm -rf /tmp/kit /tmp/kit.zip /tmp/secure_main.py /tmp/patch_runtime.py /tmp/pwa
 
 RUN pip install --no-cache-dir -r backend/requirements.txt \
  && useradd --create-home app \
