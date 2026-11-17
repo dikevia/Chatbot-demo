@@ -77,3 +77,18 @@ Le Blueprint propose le plan gratuit pour le démonstrateur. Il convient aux ess
 - Aucune base PostgreSQL/Neon n'est configurée dans ce démonstrateur.
 - Le dépôt ne produit pas encore d'application Android installable (APK).
 - Les tests automatisés vérifient le conteneur et la barrière d'accès, pas la justesse des réponses juridiques ni l'intégralité du parcours utilisateur.
+
+## Activer l'assistant IA Gemini (facultatif)
+
+Le chatbot peut utiliser l'API Gemini côté serveur. La clé reste exclusivement dans les variables d'environnement Render ; elle ne doit jamais être intégrée à l'APK, au navigateur, au dépôt GitHub ou à un message.
+
+Configurer dans Render :
+
+- `AI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai`
+- `AI_API_KEY` : clé Gemini créée dans Google AI Studio (secret Render).
+- `AI_MODEL=gemini-3.8-flash` : modèle Flash stable recommandé au moment de cette mise à jour ; vérifier sa disponibilité dans Google AI Studio pour le projet associé à la clé.
+- `AI_TIMEOUT_SECONDS=25` (facultatif, valeur par défaut).
+
+Le serveur utilise l'interface OpenAI-compatible de Gemini. Si aucune source officielle datée n'est disponible, l'IA peut uniquement fournir une orientation pratique générale : elle ne doit pas citer de règle juridique ni présenter une conclusion de droit. Une analyse juridique contextualisée reste conditionnée à la date des faits et à des sources vérifiées.
+
+Pour les essais gratuits, utiliser uniquement des scénarios fictifs : aucun nom, identifiant, dossier nominatif, donnée personnelle sensible ou secret professionnel. Le niveau gratuit de Gemini peut réutiliser les contenus soumis pour améliorer les produits Google ; vérifier les conditions applicables avant tout usage avec des données réelles.

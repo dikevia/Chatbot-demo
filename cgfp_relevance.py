@@ -181,11 +181,34 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
 
     topics = _matching_topics(query)
     if not topics:
+        # A generic word such as "travail" must not make dozens of unrelated
+        # CGFP articles look relevant. Keep only meaningful lexical matches;
+        # explicit article references were already handled above.
+        generic_terms = {
+            "mon", "ma", "mes", "ton", "ta", "tes", "son", "sa", "ses",
+            "dans", "avec", "pour", "par", "sur", "une", "des", "les", "aux",
+            "est", "sont", "que", "qui", "quoi", "quel", "quelle", "quels",
+            "quelles", "comment", "quand", "doit", "peut", "faire", "fait",
+            "agent", "agents", "fonction", "fonctionnaire", "fonctionnaires",
+            "territorial", "territoriaux", "territoriale", "territoriales",
+            "collectivite", "collectivites", "public", "publique", "publiques",
+            "publics", "article", "code", "travail",
+        }
+        query_terms = set(re.findall(r"[a-z0-9]{3,}", normalize(query))) - generic_terms
+        lexical_results = []
+        for item in base.get("results", []):
+            article = get_cgfp_article(item["article"]) or {}
+            body = normalize(str(article.get("text") or item.get("excerpt") or ""))
+            overlap = sum(1 for term in query_terms if term in body)
+            # Require at least two distinct query concepts. A generic match
+            # on a single word such as "travail" is not enough.
+            if overlap >= 2:
+                lexical_results.append(item)
         return {
             **base,
             "results": [
-                {**item, "relevance_label": "Correspondance lexicale"}
-                for item in base.get("results", [])[:safe_limit]
+                {**item, "relevance_label": "Correspondance lexicale à confirmer"}
+                for item in lexical_results[:safe_limit]
             ],
             "search_mode": "lexical",
         }

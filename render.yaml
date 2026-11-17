@@ -13,3 +13,9 @@ services:
         sync: false
       - key: DIKEVIA_DEMO_PASSWORD
         sync: false
+      - key: AI_API_BASE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        sync: false
