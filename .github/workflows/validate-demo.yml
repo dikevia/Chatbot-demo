@@ -84,7 +84,7 @@ jobs:
             echo "Interface/PWA incomplète : accueil=$home_status, app.js=$app_js_status, app.css=$app_css_status, manifest=$manifest_status, sw=$worker_status, icône=$icon_status, voix JS=$voice_js_status, voix CSS=$voice_css_status."
             exit 1
           fi
-          grep -q 'Dikevia' /tmp/dikevia-home.html
+          grep -q 'Dikévia' /tmp/dikevia-home.html
           grep -q 'voice.js' /tmp/dikevia-home.html
           grep -q 'speechSynthesis' /tmp/dikevia-voice.js
           grep -q 'SpeechRecognition' /tmp/dikevia-voice.js
