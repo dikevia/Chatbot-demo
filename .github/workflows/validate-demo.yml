@@ -122,3 +122,49 @@ jobs:
           fi
 
           echo "OK : démarrage sécurisé, santé Render publique sans données, bons identifiants acceptés, accès anonyme et mauvais mot de passe refusés."
+
+
+      - name: Assemble Dikévia Android and developer kit
+        if: success() && github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/Dikevia_Kit
+          cp -R Dockerfile README.md cgfp_relevance.py patch_runtime.py pwa render.yaml secure_main.py "Dikevia_Chatbot_V1_Kit_Developpeur (1).zip" dist/Dikevia_Kit/
+          cat > dist/Dikevia_Kit/LISEZ-MOI-ANDROID.txt <<'EOF'
+          DIKEVIA — KIT DE SAUVEGARDE
+          Version construite depuis le dépôt GitHub au moment de la génération.
+
+          INSTALLER L'APPLICATION SUR ANDROID
+          1. Ouvrir Chrome sur https://dikevia-chatbot-demo.onrender.com
+          2. Se connecter avec les identifiants Dikévia.
+          3. Ouvrir le menu ⋮ de Chrome.
+          4. Choisir "Installer l'application" ou "Ajouter à l'écran d'accueil".
+          5. L'icône Dikévia apparaît sur le téléphone.
+
+          CONFIDENTIALITÉ — LIMITES À CONNAÎTRE
+          - Cette PWA ne demande pas l'accès aux photos, fichiers, contacts, SMS ou autres contenus du téléphone.
+          - Les questions saisies sont envoyées au serveur Dikévia hébergé sur Render pour obtenir une réponse.
+          - Les ressources juridiques peuvent être demandées aux services externes configurés (notamment PISTE/Légifrance en sandbox).
+          - La reconnaissance vocale du navigateur peut transmettre l'audio à son fournisseur. Ne pas utiliser le micro pour des informations confidentielles.
+          - Le service nécessite Internet. Ce n'est pas une application autonome hors ligne.
+          - Ne saisir ni secrets, ni mots de passe, ni données personnelles sensibles ou dossiers nominatifs.
+          - Aucun fournisseur d'IA n'est configuré dans cette version.
+          - Aucun accès PostgreSQL n'est utilisé par cette démo.
+
+          SAUVEGARDE / MODIFICATION
+          - Le dossier contient les fichiers de déploiement et les correctifs de pertinence.
+          - L'archive développeur d'origine est incluse.
+          - Le dépôt GitHub reste la source modifiable et à jour : https://github.com/dikevia/Chatbot-demo
+          - Ce kit ne contient aucun mot de passe ni secret Render/PISTE.
+          EOF
+          cd dist
+          zip -qr Dikevia_Kit_Android_et_Code.zip Dikevia_Kit
+      - name: Upload Dikévia kit
+        if: success() && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dikevia-kit-android-code
+          path: dist/Dikevia_Kit_Android_et_Code.zip
+          if-no-files-found: error
+          retention-days: 30
