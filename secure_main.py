@@ -10,6 +10,8 @@ import base64
 import binascii
 import hmac
 import os
+from pathlib import Path
+from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
@@ -85,5 +87,17 @@ class BasicAuthGate:
 # Import only after the gate module is loaded; the gate wraps every HTTP route,
 # including the home page, the application health endpoint and the chatbot API.
 from dev_main import app as chatbot_app  # noqa: E402
+
+# Le kit sert son index.html à la racine, avec app.js/app.css/config.js
+# référencés par des chemins relatifs. Le montage initial /static ne les
+# rendait pas accessibles et l'interface apparaissait sans style/fonctionnement.
+# On retire uniquement la route "/" qui renvoyait le HTML seul, puis on sert
+# tout le dossier frontend à la racine. Les routes API et /health restent avant.
+chatbot_app.router.routes = [
+    route for route in chatbot_app.router.routes
+    if getattr(route, "path", None) != "/"
+]
+frontend_dir = Path(__file__).resolve().parent.parent / "frontend"
+chatbot_app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
 
 app = BasicAuthGate(chatbot_app)
