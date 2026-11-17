@@ -192,7 +192,7 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
             "agent", "agents", "fonction", "fonctionnaire", "fonctionnaires",
             "territorial", "territoriaux", "territoriale", "territoriales",
             "collectivite", "collectivites", "public", "publique", "publiques",
-            "publics", "article", "code",
+            "publics", "article", "code", "travail",
         }
         query_terms = set(re.findall(r"[a-z0-9]{3,}", normalize(query))) - generic_terms
         lexical_results = []
@@ -203,7 +203,7 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
             score = float(item.get("score", 0.0))
             # Require at least two distinct query concepts, or one highly
             # discriminating term. A generic match on "travail" is not enough.
-            if overlap >= 2 or (overlap == 1 and score >= 3.0):
+            if overlap >= 2:
                 lexical_results.append(item)
         return {
             **base,
