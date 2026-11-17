@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Dikevia – Assistant juridique",
+  "short_name": "Dikevia",
+  "description": "Démonstrateur privé de l’assistant juridique Dikevia.",
+  "lang": "fr-FR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f8fa",
+  "theme_color": "#173b63",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
