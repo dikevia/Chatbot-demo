@@ -12,16 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print orchestrator AI gate and config validation
+      - name: Print retrieval scoring implementation
         run: |
           python - <<'PY'
           from zipfile import ZipFile
           from pathlib import Path
           with ZipFile(next(Path(".").glob("*.zip"))) as z:
-              for suffix in ("backend/app/orchestrator.py", "backend/app/config.py", "backend/tests/test_ai_provider.py"):
+              for suffix in ("backend/app/cgfp.py", "backend/tests/test_cgfp_search.py"):
                   n = next(x for x in z.namelist() if x.endswith(suffix))
                   data = z.read(n).decode("utf-8", errors="replace")
-                  part = data[-18000:] if suffix.endswith(("orchestrator.py", "config.py")) else data[:9000]
                   print(f"===== {n} ({len(data)} chars) =====")
-                  print(part)
+                  print(data[:18000])
           PY
