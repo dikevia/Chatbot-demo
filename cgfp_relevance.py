@@ -200,9 +200,8 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
             article = get_cgfp_article(item["article"]) or {}
             body = normalize(str(article.get("text") or item.get("excerpt") or ""))
             overlap = sum(1 for term in query_terms if term in body)
-            score = float(item.get("score", 0.0))
-            # Require at least two distinct query concepts, or one highly
-            # discriminating term. A generic match on "travail" is not enough.
+            # Require at least two distinct query concepts. A generic match
+            # on a single word such as "travail" is not enough.
             if overlap >= 2:
                 lexical_results.append(item)
         return {
