@@ -8,6 +8,9 @@ source = source.replace(
     "from .cgfp import get_cgfp_article\nfrom .cgfp_relevance import search_cgfp",
     1,
 )
+if "from .cgfp_relevance import search_cgfp" not in source:
+    raise RuntimeError("Le moteur de pertinence CGFP n'a pas pu être raccordé.")
+
 
 old_context = '''        contextual_question = current_question[:500]
         # A short follow-up may depend on the immediately preceding question,
@@ -52,6 +55,12 @@ if old_gate in source:
     source = source.replace(old_gate, new_gate, 1)
 elif "has_cgfp_snapshot = any(" not in source:
     raise RuntimeError("Condition de refus sans source introuvable ou déjà modifiée de façon inattendue.")
+
+source = source.replace(
+    "\"title\": f\"Code général de la fonction publique — article {hit['article']}\",",
+    "\"title\": f\"Code général de la fonction publique — article {hit['article']}\" + (f\" — {hit.get('relevance_label')}\" if hit.get(\"relevance_label\") else \"\"),",
+    1,
+)
 
 source = source.replace(
     "JURIS ne formule donc pas de conclusion juridique.",
