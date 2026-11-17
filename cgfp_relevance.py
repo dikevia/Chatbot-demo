@@ -1,0 +1,243 @@
+"""Recherche CGFP enrichie par concepts juridiques explicites.
+
+Le moteur reste déterministe et lexical : les synonymes améliorent le rappel,
+les ancrages dans le texte évitent les faux positifs et les scores servent
+uniquement à ordonner les documents à examiner. Aucun statut juridique n'est déduit.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from .cgfp import get_cgfp_article, normalize, search_cgfp as lexical_search
+
+
+_TOPICS: tuple[dict[str, Any], ...] = (
+    {
+        "key": "protection_fonctionnelle",
+        "triggers": (
+            "protection fonctionnelle", "insult", "injur", "menace", "violence",
+            "outrage", "diffam", "agression", "attaque", "propos blessant",
+            "propos humiliant", "rabaisser",
+        ),
+        "expansion": (
+            "protection fonctionnelle attaques injures menaces violences "
+            "diffamations outrages dignité intégrité agent public"
+        ),
+        "anchors": (
+            "protection fonctionnelle", "injure", "menace", "violence",
+            "attaque", "outrage", "diffamation",
+        ),
+        "boosts": {
+            "protection fonctionnelle": 14.0, "injure": 9.0, "menace": 6.0,
+            "violence": 6.0, "attaque": 6.0, "outrage": 6.0,
+            "diffamation": 5.0,
+        },
+        "exclude_unless_anchor": ("harcelement sexuel", "connotation sexuelle"),
+    },
+    {
+        "key": "harcelement_moral",
+        "triggers": (
+            "harcelement moral", "agissements repetes", "degradation des conditions",
+            "humiliations repetees", "mise a l ecart repetee",
+        ),
+        "expansion": (
+            "harcèlement moral agissements répétés dégradation conditions travail "
+            "dignité santé physique mentale avenir professionnel"
+        ),
+        "anchors": (
+            "harcelement moral", "agissements repetes", "degradation des conditions",
+            "sante physique ou mentale", "dignite", "avenir professionnel",
+        ),
+        "boosts": {
+            "harcelement moral": 14.0, "agissements repetes": 10.0,
+            "degradation des conditions": 7.0, "sante physique ou mentale": 5.0,
+        },
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "harcelement_sexuel",
+        "triggers": (
+            "harcelement sexuel", "propos sexistes", "agissement sexiste",
+            "connotation sexuelle", "agression sexuelle",
+        ),
+        "expansion": (
+            "harcèlement sexuel propos comportements connotation sexuelle "
+            "pression grave répétée agissement sexiste dignité"
+        ),
+        "anchors": (
+            "harcelement sexuel", "connotation sexuelle", "agissement sexiste",
+            "propos sexistes",
+        ),
+        "boosts": {"harcelement sexuel": 14.0, "agissement sexiste": 8.0},
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "discipline",
+        "triggers": (
+            "sanction disciplinaire", "procedure disciplinaire", "avertissement",
+            "blame", "exclusion temporaire", "revocation", "conseil de discipline",
+            "suspension disciplinaire",
+        ),
+        "expansion": (
+            "sanction disciplinaire faute procédure droits défense avertissement blâme "
+            "exclusion temporaire révocation conseil discipline proportionnalité"
+        ),
+        "anchors": (
+            "sanction disciplinaire", "procedure disciplinaire", "avertissement",
+            "blame", "exclusion temporaire", "revocation", "conseil de discipline",
+        ),
+        "boosts": {"sanction disciplinaire": 12.0, "procedure disciplinaire": 9.0},
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "maladie_service",
+        "triggers": (
+            "accident de service", "maladie professionnelle", "imputable au service",
+            "conge longue maladie", "conge longue duree", "citis",
+            "arret maladie", "conge maladie",
+        ),
+        "expansion": (
+            "accident de service maladie professionnelle imputabilité au service CITIS "
+            "congé maladie congé longue maladie congé longue durée soins arrêt"
+        ),
+        "anchors": (
+            "accident de service", "maladie professionnelle", "imputable au service",
+            "citis", "conge de longue maladie", "conge de longue duree",
+            "conge de maladie",
+        ),
+        "boosts": {"accident de service": 12.0, "maladie professionnelle": 12.0, "citis": 10.0},
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "remuneration",
+        "triggers": (
+            "remuneration", "traitement indiciaire", "salaire", "prime", "indemnite",
+            "ifse", "nbi", "rifseep", "heures supplementaires",
+        ),
+        "expansion": (
+            "rémunération traitement indiciaire salaire indemnité primes NBI IFSE "
+            "RIFSEEP régime indemnitaire heures supplémentaires"
+        ),
+        "anchors": (
+            "remuneration", "traitement indiciaire", "indemnite", "prime",
+            "nouvelle bonification indiciaire", "nbi", "ifse",
+        ),
+        "boosts": {"remuneration": 12.0, "traitement indiciaire": 10.0},
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "temps_travail",
+        "triggers": (
+            "temps de travail", "duree du travail", "temps partiel", "heures supplementaires",
+            "astreinte", "conges annuels", "rtt", "annualisation", "horaires",
+        ),
+        "expansion": (
+            "durée temps de travail temps partiel horaires annualisation RTT astreintes "
+            "heures supplémentaires congés annuels repos"
+        ),
+        "anchors": (
+            "temps de travail", "duree du travail", "temps partiel", "astreinte",
+            "heures supplementaires", "conges annuels", "repos",
+        ),
+        "boosts": {"temps de travail": 12.0, "duree du travail": 10.0, "temps partiel": 8.0},
+        "exclude_unless_anchor": (),
+    },
+    {
+        "key": "agents_contractuels",
+        "triggers": (
+            "agent contractuel", "contractuel", "cdd", "cdi", "renouvellement de contrat",
+            "fin de contrat", "licenciement contractuel",
+        ),
+        "expansion": (
+            "agent contractuel contrat durée déterminée CDD CDI renouvellement recrutement "
+            "licenciement fin de contrat rémunération droits"
+        ),
+        "anchors": (
+            "agent contractuel", "contrat a duree determinee", "contrat a duree indeterminee",
+            "renouvellement du contrat", "licenciement",
+        ),
+        "boosts": {"agent contractuel": 12.0, "contrat a duree determinee": 8.0},
+        "exclude_unless_anchor": (),
+    },
+)
+
+
+def _matching_topics(query: str) -> list[dict[str, Any]]:
+    folded = normalize(query)
+    return [
+        topic for topic in _TOPICS
+        if any(normalize(trigger) in folded for trigger in topic["triggers"])
+    ]
+
+
+def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
+    """Return ranked CGFP leads, with domain-specific precision safeguards."""
+    safe_limit = max(1, min(int(limit), 20))
+    base = lexical_search(query, limit=20)
+    # An explicit article number is a direct lookup: do not rewrite or filter it.
+    if any(normalize(ref) in normalize(query) for ref in ("L ", "R ", "D ")):
+        return {**base, "results": base.get("results", [])[:safe_limit], "search_mode": "reference_directe"}
+
+    topics = _matching_topics(query)
+    if not topics:
+        return {
+            **base,
+            "results": [
+                {**item, "relevance_label": "Correspondance lexicale"}
+                for item in base.get("results", [])[:safe_limit]
+            ],
+            "search_mode": "lexical",
+        }
+
+    expansion = " ".join(topic["expansion"] for topic in topics)
+    enriched = lexical_search((query[:350] + " " + expansion)[:500], limit=20)
+    merged: dict[str, dict[str, Any]] = {}
+    for item in base.get("results", []):
+        merged[item["article"]] = {**item, "_original_score": float(item.get("score", 0.0))}
+    for item in enriched.get("results", []):
+        current = merged.get(item["article"], {})
+        merged[item["article"]] = {
+            **current, **item,
+            "_original_score": max(
+                float(current.get("_original_score", 0.0)),
+                float(item.get("score", 0.0)) * 0.72,
+            ),
+        }
+
+    ranked: list[dict[str, Any]] = []
+    for ref, item in merged.items():
+        article = get_cgfp_article(ref) or {}
+        body = normalize(str(article.get("text") or item.get("excerpt") or ""))
+        matched_anchors: list[str] = []
+        score = float(item.get("_original_score", item.get("score", 0.0)))
+        excluded = False
+        for topic in topics:
+            topic_anchors = [anchor for anchor in topic["anchors"] if normalize(anchor) in body]
+            matched_anchors.extend(topic_anchors)
+            if topic["exclude_unless_anchor"] and any(
+                normalize(term) in body for term in topic["exclude_unless_anchor"]
+            ) and not topic_anchors:
+                excluded = True
+            for phrase, boost in topic["boosts"].items():
+                if normalize(phrase) in body:
+                    score += boost
+        if excluded or not matched_anchors:
+            continue
+        unique_anchors = list(dict.fromkeys(matched_anchors))
+        ranked.append({
+            **{k: v for k, v in item.items() if not k.startswith("_")},
+            "score": round(score, 4),
+            "matched_concepts": unique_anchors[:6],
+            "relevance_label": "Fondement à examiner en priorité" if score >= 10 else "Disposition complémentaire à examiner",
+        })
+
+    ranked.sort(key=lambda item: (-float(item["score"]), item["article"]))
+    for index, item in enumerate(ranked):
+        if index == 0:
+            item["relevance_label"] = "Premier résultat à examiner"
+    return {
+        **base,
+        "results": ranked[:safe_limit],
+        "search_mode": "concepts_juridiques",
+        "detected_topics": [topic["key"] for topic in topics],
+    }
