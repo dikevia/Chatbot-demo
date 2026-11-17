@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dikevia-chatbot-demo
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /_render-health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DIKEVIA_DEMO_USER
+        sync: false
+      - key: DIKEVIA_DEMO_PASSWORD
+        sync: false
