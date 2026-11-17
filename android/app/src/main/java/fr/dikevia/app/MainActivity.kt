@@ -122,12 +122,12 @@ class MainActivity : Activity() {
         }
         val username = EditText(this).apply {
             hint = "Identifiant Dikévia"
-            singleLine = true
+            isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT
         }
         val password = EditText(this).apply {
             hint = "Code d'accès"
-            singleLine = true
+            isSingleLine = true
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
         layout.addView(username)
