@@ -1,0 +1,63 @@
+# Dikevia — démonstrateur du chatbot juridique
+
+Ce dépôt contient le kit de démonstration du chatbot Dikevia, son image Docker et une protection d'accès HTTP Basic.
+
+> **Statut : démonstrateur technique.** La réussite du build Docker et des tests automatisés ne constitue pas une validation juridique, un audit de sécurité complet ou une autorisation de mise en production commerciale. Le kit d'origine est un environnement de développement local.
+
+## Contenu
+
+- `Dikevia_Chatbot_V1_Kit_Developpeur (1).zip` : kit applicatif.
+- `Dockerfile` : construction de l'image.
+- `secure_main.py` : barrière d'authentification devant toutes les routes HTTP.
+- `.github/workflows/validate-demo.yml` : tests automatiques de construction, de démarrage et de contrôle d'accès.
+
+## Variables d'environnement obligatoires
+
+Le serveur refuse de démarrer si ces deux variables ne sont pas configurées :
+
+- `DIKEVIA_DEMO_USER` : au moins 3 caractères.
+- `DIKEVIA_DEMO_PASSWORD` : au moins 24 caractères.
+
+**Ne placez jamais leurs valeurs dans le dépôt, dans le Dockerfile, dans le code source ou dans un message public.** Configurez-les uniquement dans les variables/secrets de l'hébergeur.
+
+## Essai local
+
+Après avoir construit l'image :
+
+```bash
+docker build -t dikevia-chatbot-demo .
+docker run --rm -p 8000:8000 \
+  -e DIKEVIA_DEMO_USER=demo-user \
+  -e DIKEVIA_DEMO_PASSWORD='REMPLACER_PAR_UN_SECRET_DE_24_CARACTERES_MINIMUM' \
+  dikevia-chatbot-demo
+```
+
+Puis ouvrir `http://127.0.0.1:8000/health` et saisir les identifiants de démonstration dans la fenêtre d'authentification du navigateur.
+
+Cet exemple est destiné à un essai local uniquement. Ne réutilisez pas les valeurs d'exemple comme identifiants réels.
+
+## Hébergement
+
+- Activer HTTPS/TLS avant toute exposition sur Internet : HTTP Basic transmet les identifiants encodés, pas chiffrés.
+- Définir les deux variables dans le gestionnaire de secrets de l'hébergeur.
+- Ne jamais désactiver la barrière d'authentification pour rendre le chatbot public.
+- Prévoir avant toute ouverture à des utilisateurs : limitation de débit, surveillance des abus, gestion des coûts, politique de conservation des données, tests de sécurité et validation juridique des réponses.
+- Vérifier la compatibilité de la route de santé de l'hébergeur : dans cette version, `/health` est elle aussi protégée par authentification.
+
+## Validation continue
+
+À chaque modification de la branche `main`, GitHub Actions :
+
+1. construit l'image Docker ;
+2. vérifie que l'application refuse de démarrer sans secrets ;
+3. démarre le conteneur avec des identifiants temporaires de CI ;
+4. vérifie que les bons identifiants sont acceptés ;
+5. vérifie que l'accès anonyme et un mauvais mot de passe sont refusés.
+
+Les identifiants utilisés par la CI sont temporaires et ne sont pas des secrets de production. Le workflow construit et teste l'image ; il ne la publie pas et ne déploie pas l'application.
+
+## Limites connues
+
+- Aucune base PostgreSQL/Neon n'est configurée dans ce démonstrateur.
+- Le dépôt ne produit pas encore d'application Android installable (APK).
+- Les tests automatisés vérifient le conteneur et la barrière d'accès, pas la justesse des réponses juridiques ni l'intégralité du parcours utilisateur.
