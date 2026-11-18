@@ -6,7 +6,7 @@ orchestrator_path = ROOT / "backend/app/orchestrator.py"
 source = orchestrator_path.read_text(encoding="utf-8")
 
 import_anchor = "from .cgfp_relevance import search_cgfp"
-import_replacement = import_anchor + "\nfrom .fpt_scope import classify_public_service_scope"
+import_replacement = import_anchor + "\nfrom .fpt_scope import classify_public_service_scope, is_ihts_relevant_source"
 if import_anchor not in source:
     raise RuntimeError("Import du moteur CGFP introuvable pour le filtre FPT.")
 if "from .fpt_scope import classify_public_service_scope" not in source:
@@ -19,12 +19,15 @@ regulatory_anchor = '''        for item in regulatory_sources:
 '''
 regulatory_replacement = '''        for item in regulatory_sources:
             full_text = item.get("full_text") or ""
-            scope = classify_public_service_scope({**item, "full_text": full_text})
+            scoped_item = {**item, "full_text": full_text}
+            scope = classify_public_service_scope(scoped_item)
+            topic_relevant = is_ihts_relevant_source(current_question, scoped_item)
             sources.append({
                 **item,
                 "public_service_scope": scope["scope"],
                 "public_service_scope_evidence": scope["evidence"],
-                "analysis_eligible": scope["analysis_eligible"],
+                "topic_relevant": topic_relevant,
+                "analysis_eligible": scope["analysis_eligible"] and topic_relevant,
 '''
 if regulatory_anchor in source:
     source = source.replace(regulatory_anchor, regulatory_replacement, 1)
@@ -60,6 +63,8 @@ case_law_anchor = '''        if case_law_sources:
 '''
 scope_warning = case_law_anchor + '''        if any(s.get("source_type") == "LEGIFRANCE_LODA" and s.get("analysis_eligible") is not True for s in sources):
             missing.insert(0, "Certains textes réglementaires repérés ne sont pas clairement applicables à la fonction publique territoriale ; ils restent affichés comme pistes et sont exclus de l'analyse IA.")
+        if any(s.get("source_type") == "LEGIFRANCE_LODA" and s.get("topic_relevant") is False for s in sources):
+            missing.insert(0, "Certains résultats Légifrance sont sans rapport direct avec les heures supplémentaires ; ils restent écartés de la sélection et de l'analyse IA.")
 '''
 if case_law_anchor in source:
     source = source.replace(case_law_anchor, scope_warning, 1)
