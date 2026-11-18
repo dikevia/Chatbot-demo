@@ -20,6 +20,9 @@ jobs:
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
 
+      - name: Test PISTE Légifrance client
+        run: python -m unittest tests.test_piste_legifrance -v
+
       - name: Verify the legal-search fallback patch is present
         shell: bash
         run: |
