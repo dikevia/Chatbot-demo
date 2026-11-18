@@ -17,23 +17,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Inspect packaged orchestrator integration points
-        run: |
-          python - <<'PY'
-          import pathlib, zipfile
-          zpath = next(pathlib.Path('.').glob('*.zip'))
-          with zipfile.ZipFile(zpath) as z:
-            for name in ('Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/orchestrator.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/ai_provider.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/legifrance.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/jurisprudence.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/config.py'):
-              print('\\n===== '+name+' =====')
-              data = z.read(name).decode('utf-8')
-              print(data[:45000])
-          PY
-
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
 
-      - name: Test PISTE Légifrance client
-        run: python -m unittest tests.test_piste_legifrance -v
+      - name: Test conservative FPT scope filter
+        run: python -m unittest tests.test_fpt_scope -v
 
       - name: Verify the legal-search fallback patch is present
         shell: bash
