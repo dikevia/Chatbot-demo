@@ -2,6 +2,7 @@ import asyncio
 import json
 import sys
 import unittest
+from unittest import mock
 from datetime import date
 from urllib.parse import parse_qs
 
@@ -67,7 +68,7 @@ class ExistingLegifranceConnectorTests(unittest.TestCase):
             raise AssertionError(f"Unexpected PISTE endpoint: {request.url.path}")
 
         async def exercise():
-            with unittest.mock.patch.object(settings, "legifrance_client_id", "sandbox-client"), \
+            with mock.patch.object(settings, "legifrance_client_id", "sandbox-client"), \
                  unittest.mock.patch.object(settings, "legifrance_client_secret", "sandbox-secret"), \
                  unittest.mock.patch.object(settings, "legifrance_environment", "sandbox"):
                 transport = httpx.MockTransport(handler)
