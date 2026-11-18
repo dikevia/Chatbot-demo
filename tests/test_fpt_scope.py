@@ -43,7 +43,7 @@ class FPTScopeTests(unittest.TestCase):
         })
         self.assertEqual(result["scope"], "FPT_REFERENCE")
         self.assertTrue(result["analysis_eligible"])
-        self.assertIn("délibération locale", result["evidence"][0])
+        self.assertIn("deliberation locale", result["evidence"][0])
 
     def test_ambiguous_scope_fails_closed(self):
         result = classify_public_service_scope({
