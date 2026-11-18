@@ -1,0 +1,22 @@
+name: Inspect selected-source backend flow
+on:
+  push:
+    branches:
+      - feat/chat-selected-text-analysis
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dump orchestrator, CGFP lookup, frontend styles and tests
+        run: |
+          python - <<'PY'
+          import zipfile, pathlib
+          zpath = next(pathlib.Path('.').glob('*.zip'))
+          with zipfile.ZipFile(zpath) as z:
+            for n in z.namelist():
+              if n.endswith(('.py','.js','.css','.html')) and any(k in n.lower() for k in ('orchestrator.py','cgfp.py','app.css','test_orchestrator','test_ai_provider','test_chat')):
+                print('\\n===== '+n+' =====')
+                try: print(z.read(n).decode('utf-8'))
+                except Exception as e: print('READ ERROR',e)
+          PY

@@ -1,0 +1,54 @@
+name: Patch selected legal text analysis
+on:
+  push:
+    branches:
+      - feat/chat-selected-text-analysis
+    paths:
+      - scripts/patch_selected_source_analysis.py
+      - .github/workflows/patch-selected-source-analysis.yml
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/chat-selected-text-analysis
+      - name: Patch the packaged beta application
+        run: |
+          python scripts/patch_selected_source_analysis.py
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import tempfile, subprocess
+          zips = list(Path('.').glob('*.zip'))
+          assert len(zips) == 1, zips
+          with ZipFile(zips[0]) as z:
+              names = z.namelist()
+              for suffix in [
+                  'backend/app/orchestrator.py',
+                  'backend/dev_main.py',
+                  'backend/app/ai_provider.py',
+                  'frontend/app.js',
+                  'frontend/app.css',
+              ]:
+                  assert any(n.endswith(suffix) for n in names), suffix
+              for suffix in ['backend/app/orchestrator.py','backend/dev_main.py','backend/app/ai_provider.py']:
+                  name = next(n for n in names if n.endswith(suffix))
+                  compile(z.read(name), name, 'exec')
+              appjs = next(n for n in names if n.endswith('frontend/app.js'))
+              Path('/tmp/dikevia-app.js').write_bytes(z.read(appjs))
+          PY
+          node --check /tmp/dikevia-app.js
+      - name: Commit updated beta package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.zip'
+          if git diff --cached --quiet; then
+            echo "No package changes to commit"
+            exit 0
+          fi
+          git commit -m "feat: add selected legal text analysis to chatbot beta"
+          git push origin feat/chat-selected-text-analysis

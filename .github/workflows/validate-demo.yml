@@ -34,6 +34,14 @@ jobs:
         run: |
           docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'import sys; sys.path.insert(0, "/app/backend"); from app.config import Settings, validate_runtime_configuration; cfg=Settings(ai_api_base_url="https://generativelanguage.googleapis.com/v1beta/openai", ai_api_key="test-only-not-a-secret", ai_model="gemini-3.8-flash"); validate_runtime_configuration(cfg); from pathlib import Path; p=Path("/app/backend/app/orchestrator.py"); s=p.read_text(encoding="utf-8"); compile(s, str(p), "exec"); assert "_dikevia_general_ai_orientation" in s; assert "sources=[]" in s; assert "Orientation générale et pratique" in s; print("OK : endpoint Gemini accepté et orientation générale sans source juridique présente.")'
 
+      - name: Verify selected legal text analysis wiring
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'import sys, inspect; sys.path.insert(0, "/app/backend"); from app.orchestrator import LegalOrchestrator, source_selection_key; from dev_main import ChatQuestion; assert "selected_source_keys" in ChatQuestion.model_fields; assert "selected_source_keys" in inspect.signature(LegalOrchestrator.ask).parameters; assert source_selection_key({"source_type":"CGFP_SNAPSHOT","article":"L134-5","source_id":"FR-CGFP"}) == "CGFP_SNAPSHOT|L134-5"; print("OK : sélection des articles reçue et revalidée par le backend.")'
+          docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'from pathlib import Path; print(Path("/app/frontend/chat-logic.js").read_text())' > /tmp/dikevia-chat-logic.js
+          node --check /tmp/dikevia-chat-logic.js
+          node -e 'const L=require("/tmp/dikevia-chat-logic.js"); const s=L.trimSources([{source_type:"CGFP_SNAPSHOT",source_id:"FR-CGFP",article:"L134-5",content_kind:"FULL_TEXT",citation_integrity:{valid:true}}])[0]; if (!s.citation_integrity || s.citation_integrity.valid !== true || s.content_kind !== "FULL_TEXT") process.exit(1); console.log("OK : métadonnées de validation conservées pour les cases à cocher.");'
+
       - name: Verify the application refuses to start without secrets
         shell: bash
         run: |

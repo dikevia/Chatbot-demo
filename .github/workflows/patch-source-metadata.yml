@@ -1,0 +1,39 @@
+name: Preserve source selection metadata
+on:
+  push:
+    branches:
+      - feat/chat-selected-text-analysis
+    paths:
+      - scripts/patch_source_metadata.py
+      - .github/workflows/patch-source-metadata.yml
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/chat-selected-text-analysis
+      - name: Preserve source metadata in packaged frontend
+        run: |
+          python scripts/patch_source_metadata.py
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          zips = list(Path('.').glob('*.zip'))
+          assert len(zips) == 1
+          with ZipFile(zips[0]) as z:
+              p = next(n for n in z.namelist() if n.endswith('frontend/chat-logic.js'))
+              s = z.read(p).decode('utf-8')
+              assert 'citation_integrity: s.citation_integrity' in s
+              assert 'content_kind: s.content_kind' in s
+          PY
+      - name: Commit updated beta package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.zip'
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix: preserve metadata needed for source selection"
+          git push origin feat/chat-selected-text-analysis
