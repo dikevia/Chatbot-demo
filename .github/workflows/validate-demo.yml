@@ -23,7 +23,7 @@ jobs:
           import pathlib, zipfile
           zpath = next(pathlib.Path('.').glob('*.zip'))
           with zipfile.ZipFile(zpath) as z:
-            for name in ('Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/orchestrator.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/ai_provider.py'):
+            for name in ('Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/orchestrator.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/ai_provider.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/legifrance.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/jurisprudence.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/config.py'):
               print('\\n===== '+name+' =====')
               data = z.read(name).decode('utf-8')
               print(data[:45000])
