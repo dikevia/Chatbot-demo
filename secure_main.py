@@ -113,13 +113,40 @@ async def _piste_observed_send(self, request, *args, **kwargs):
     else:
         return await _original_async_client_send(self, request, *args, **kwargs)
     _piste_last_upstream.clear()
-    _piste_last_upstream.update({"stage": stage, "status": None, "error_type": None, "oauth_error": None})
+    _piste_last_upstream.update({
+        "stage": stage, "status": None, "error_type": None, "oauth_error": None,
+        "method": request.method.upper(),
+        "endpoint": (
+            request.url.path.rsplit("/", 2)[-2] + "/" + request.url.path.rsplit("/", 2)[-1]
+            if request.url.path.endswith("/legiPart") else
+            next((name for name in ("ping", "search") if request.url.path.endswith("/" + name)), "other")
+        ),
+        "content_type": None, "response_json_keys": None, "api_error_code": None,
+    })
     try:
         response = await _original_async_client_send(self, request, *args, **kwargs)
     except Exception as exc:
         _piste_last_upstream["error_type"] = type(exc).__name__
         raise
     _piste_last_upstream["status"] = int(response.status_code)
+    _piste_last_upstream["content_type"] = response.headers.get("content-type", "")[:80]
+    if stage == "legifrance_api" and response.status_code >= 400:
+        # Keep only JSON key names and a short machine-readable code. Never
+        # retain response messages, payload values, IDs, headers or tokens.
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                _piste_last_upstream["response_json_keys"] = sorted(
+                    str(key)[:40] for key in payload.keys()
+                )[:12]
+                import re
+                for key in ("code", "errorCode", "error_code", "type", "error"):
+                    value = payload.get(key)
+                    if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", value):
+                        _piste_last_upstream["api_error_code"] = value
+                        break
+        except Exception:
+            pass
     if stage == "oauth" and response.status_code >= 400:
         # Expose only a standard OAuth error code from a strict allowlist.
         # Never expose error_description, response bodies, or credential data.
@@ -207,13 +234,23 @@ async def _dikevia_piste_health():
         upstream_error_type = _piste_last_upstream.get("error_type")
         # Only controlled metadata is logged and returned.
         _piste_logger.warning(
-            "PISTE health check failed: code=%s stage=%s status=%s oauth_error=%s upstream_error_type=%s exception_type=%s",
-            diagnostic_code, stage or "unknown", status, _piste_last_upstream.get("oauth_error"), upstream_error_type, type(exc).__name__,
+            "PISTE health check failed: code=%s stage=%s method=%s endpoint=%s status=%s api_error_code=%s response_json_keys=%s content_type=%s oauth_error=%s upstream_error_type=%s exception_type=%s",
+            diagnostic_code, stage or "unknown", _piste_last_upstream.get("method"),
+            _piste_last_upstream.get("endpoint"), status,
+            _piste_last_upstream.get("api_error_code"),
+            _piste_last_upstream.get("response_json_keys"),
+            _piste_last_upstream.get("content_type"),
+            _piste_last_upstream.get("oauth_error"), upstream_error_type, type(exc).__name__,
         )
         return JSONResponse(
             {"status": "unavailable", "environment": legifrance_connector.environment,
              "diagnostic_code": diagnostic_code,
              "diagnostic_stage": stage, "upstream_status": status,
+             "upstream_method": _piste_last_upstream.get("method"),
+             "upstream_endpoint": _piste_last_upstream.get("endpoint"),
+             "upstream_content_type": _piste_last_upstream.get("content_type"),
+             "upstream_response_json_keys": _piste_last_upstream.get("response_json_keys"),
+             "upstream_api_error_code": _piste_last_upstream.get("api_error_code"),
              "upstream_error_type": upstream_error_type,
              "upstream_oauth_error": _piste_last_upstream.get("oauth_error"),
              "message": "Authentification ou point de contrôle Légifrance indisponible."},
