@@ -6,7 +6,7 @@ orchestrator_path = ROOT / "backend/app/orchestrator.py"
 source = orchestrator_path.read_text(encoding="utf-8")
 
 import_anchor = "from .cgfp_relevance import search_cgfp"
-import_replacement = import_anchor + "\\nfrom .fpt_scope import classify_public_service_scope"
+import_replacement = import_anchor + "\nfrom .fpt_scope import classify_public_service_scope"
 if import_anchor not in source:
     raise RuntimeError("Import du moteur CGFP introuvable pour le filtre FPT.")
 if "from .fpt_scope import classify_public_service_scope" not in source:
@@ -72,7 +72,7 @@ compile(source, str(orchestrator_path), "exec")
 ai_path = ROOT / "backend/app/ai_provider.py"
 ai_source = ai_path.read_text(encoding="utf-8")
 prompt_anchor = "- Respecte strictement leur provenance, leur statut et leur temporalité ; ne déduis jamais leur applicabilité de leur seule présence."
-prompt_replacement = prompt_anchor + "\\n- Pour les textes réglementaires hors CGFP, vérifie le champ de la fonction publique : un texte FPE ou FPH n'est pas une règle FPT. Les textes de périmètre incertain sont des pistes à vérifier et ne doivent pas fonder une conclusion."
+prompt_replacement = prompt_anchor + "\n- Pour les textes réglementaires hors CGFP, vérifie le champ de la fonction publique : un texte FPE ou FPH n'est pas une règle FPT. Les textes de périmètre incertain sont des pistes à vérifier et ne doivent pas fonder une conclusion."
 if prompt_anchor in ai_source:
     ai_source = ai_source.replace(prompt_anchor, prompt_replacement, 1)
 elif "un texte FPE ou FPH n'est pas une règle FPT" not in ai_source:
@@ -94,8 +94,8 @@ compile(ai_source, str(ai_path), "exec")
 chat_logic_path = ROOT / "frontend/chat-logic.js"
 if chat_logic_path.exists():
     chat_logic = chat_logic_path.read_text(encoding="utf-8")
-    integrity_line = '      citation_integrity: s.citation_integrity ? { valid: s.citation_integrity.valid === true } : null,\\n'
-    eligibility_line = integrity_line + '      analysis_eligible: s.analysis_eligible !== false,\\n'
+    integrity_line = '      citation_integrity: s.citation_integrity ? { valid: s.citation_integrity.valid === true } : null,\n'
+    eligibility_line = integrity_line + '      analysis_eligible: s.analysis_eligible !== false,\n'
     if integrity_line in chat_logic:
         chat_logic = chat_logic.replace(integrity_line, eligibility_line, 1)
     elif 'analysis_eligible: s.analysis_eligible !== false' not in chat_logic:
