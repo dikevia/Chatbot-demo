@@ -8,18 +8,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect Légifrance connector source from developer kit
+      - name: Inspect PISTE environment configuration
         run: |
           python - <<'PY'
           import zipfile, pathlib
           zpath = next(pathlib.Path('.').glob('*.zip'))
-          needles = ('legifrance.py', 'jurisprudence.py', 'secure_main.py', 'settings.py')
           with zipfile.ZipFile(zpath) as z:
-            names = [n for n in z.namelist() if n.endswith('.py') and any(k in n.lower() for k in needles)]
-            for n in names:
-              print('\\n===== ' + n + ' =====')
-              try:
-                print(z.read(n).decode('utf-8'))
-              except Exception as e:
-                print('READ ERROR', type(e).__name__)
+            for n in z.namelist():
+              if n.endswith('.py') and ('backend/app/' in n or 'backend/tests/' in n):
+                try:
+                  lines = z.read(n).decode('utf-8').splitlines()
+                except Exception:
+                  continue
+                hits = [(i, line) for i, line in enumerate(lines, 1)
+                        if any(k in line.lower() for k in ('legifrance_environment', 'legifrance_client_id',
+                           'legifrance_client_secret', 'legifrance_scope', 'env_prefix', 'base_settings'))]
+                if hits:
+                  print('\\n===== ' + n + ' =====')
+                  for i, line in hits:
+                    lo, hi = max(1, i-3), min(len(lines), i+3)
+                    for number in range(lo, hi+1):
+                      print(f'{number}: {lines[number-1]}')
           PY
