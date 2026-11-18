@@ -38,7 +38,9 @@ jobs:
         shell: bash
         run: |
           docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'import sys, inspect; sys.path.insert(0, "/app/backend"); from app.orchestrator import LegalOrchestrator, source_selection_key; from dev_main import ChatQuestion; assert "selected_source_keys" in ChatQuestion.model_fields; assert "selected_source_keys" in inspect.signature(LegalOrchestrator.ask).parameters; assert source_selection_key({"source_type":"CGFP_SNAPSHOT","article":"L134-5","source_id":"FR-CGFP"}) == "CGFP_SNAPSHOT|L134-5"; print("OK : sélection des articles reçue et revalidée par le backend.")'
-          docker run --rm --entrypoint node dikevia-chatbot-demo:test -e 'const L=require("/app/frontend/chat-logic.js"); const s=L.trimSources([{source_type:"CGFP_SNAPSHOT",source_id:"FR-CGFP",article:"L134-5",content_kind:"FULL_TEXT",citation_integrity:{valid:true}}])[0]; if (!s.citation_integrity || s.citation_integrity.valid !== true || s.content_kind !== "FULL_TEXT") process.exit(1); console.log("OK : métadonnées de validation conservées pour les cases à cocher.");'
+          docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'from pathlib import Path; print(Path("/app/frontend/chat-logic.js").read_text())' > /tmp/dikevia-chat-logic.js
+          node --check /tmp/dikevia-chat-logic.js
+          node -e 'const L=require("/tmp/dikevia-chat-logic.js"); const s=L.trimSources([{source_type:"CGFP_SNAPSHOT",source_id:"FR-CGFP",article:"L134-5",content_kind:"FULL_TEXT",citation_integrity:{valid:true}}])[0]; if (!s.citation_integrity || s.citation_integrity.valid !== true || s.content_kind !== "FULL_TEXT") process.exit(1); console.log("OK : métadonnées de validation conservées pour les cases à cocher.");'
 
       - name: Verify the application refuses to start without secrets
         shell: bash
