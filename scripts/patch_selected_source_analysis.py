@@ -104,11 +104,8 @@ class LegalOrchestrator:
     selected_source_keys: list[str] | None = Field(default=None, max_length=12)'''
                     if old not in text: raise SystemExit("dev_main request model anchor not found")
                     text = text.replace(old, new, 1)
-                    old = '''request, organization_id="CHATBOT_V1_LOCAL_ONLY", conn=None, conversation_history=history,
-            )'''
-                    new = '''request, organization_id="CHATBOT_V1_LOCAL_ONLY", conn=None, conversation_history=history,
-                selected_source_keys=payload.selected_source_keys,
-            )'''
+                    old = 'request, organization_id="CHATBOT_V1_LOCAL_ONLY", conn=None, conversation_history=history,'
+                    new = old + "\\n                selected_source_keys=payload.selected_source_keys,"
                     if old not in text: raise SystemExit("dev_main orchestrator call anchor not found")
                     text = text.replace(old, new, 1)
 
