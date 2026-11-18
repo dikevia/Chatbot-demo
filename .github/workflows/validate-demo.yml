@@ -23,6 +23,9 @@ jobs:
       - name: Test conservative FPT scope filter
         run: python -m unittest tests.test_fpt_scope -v
 
+      - name: Test existing PISTE Légifrance and CETAT connectors with mocked API responses
+        run: docker run --rm -v "$PWD/tests:/tests:ro" --entrypoint python dikevia-chatbot-demo:test -m unittest discover -s /tests -p 'test_legifrance_contracts.py' -v
+
       - name: Verify FPT scope guard is connected to search and Gemini
         shell: bash
         run: |
