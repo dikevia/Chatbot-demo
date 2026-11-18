@@ -78,6 +78,20 @@ def classify_public_service_scope(source: dict[str, Any]) -> dict[str, Any]:
     fph_hits = [marker for marker in _FPH_MARKERS if _fold(marker) in corpus]
     fpe_hits = [marker for marker in _FPE_MARKERS if _fold(marker) in corpus]
 
+    # Narrow FPT bridge: decree n° 2002-60 is the IHTS reference regime
+    # used through the territorial indemnity framework. The prompt still
+    # requires decree n° 91-875 and the local deliberation to be checked.
+    is_ihts_reference = (
+        "2002 60" in corpus
+        and "indemnites horaires pour travaux supplementaires" in corpus
+    )
+    if is_ihts_reference:
+        return {
+            "scope": "FPT_REFERENCE",
+            "evidence": ["decret 2002-60 : reference IHTS a verifier avec le decret 91-875 et la deliberation locale"],
+            "analysis_eligible": True,
+        }
+
     if fpt_hits:
         return {
             "scope": "FPT",

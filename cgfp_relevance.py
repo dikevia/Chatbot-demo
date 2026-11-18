@@ -110,6 +110,41 @@ _TOPICS: tuple[dict[str, Any], ...] = (
         "exclude_unless_anchor": (),
     },
     {
+        "key": "heures_supplementaires_ihts",
+        "triggers": (
+            "heures supplementaires", "heure supplementaire", "heures sup",
+            "heures supp", "heures supolementaires", "heure supolementaire",
+            "heures supllementaires", "ihts",
+            "indemnites horaires pour travaux supplementaires",
+            "travaux supplementaires",
+        ),
+        "expansion": (
+            "indemnités horaires pour travaux supplémentaires IHTS "
+            "décret 2002-60 décret 91-875 décret 2001-623 "
+            "heures supplémentaires heures complémentaires cycle de travail "
+            "bornes horaires demande expresse autorité territoriale "
+            "délibération assemblée délibérante repos compensateur indemnisation "
+            "contrôle décompte des heures cadre d'emplois catégorie B catégorie C"
+        ),
+        "anchors": (
+            "heures supplementaires", "heure supplementaire",
+            "indemnites horaires pour travaux supplementaires",
+            "travaux supplementaires", "repos compensateur",
+            "cycle de travail", "decret 2002 60", "decret 91 875",
+            "decret 2001 623",
+        ),
+        "boosts": {
+            "heures supplementaires": 16.0,
+            "indemnites horaires pour travaux supplementaires": 18.0,
+            "repos compensateur": 7.0,
+            "cycle de travail": 6.0,
+            "decret 2002 60": 8.0,
+            "decret 91 875": 10.0,
+            "decret 2001 623": 8.0,
+        },
+        "exclude_unless_anchor": (),
+    },
+    {
         "key": "remuneration",
         "triggers": (
             "remuneration", "traitement indiciaire", "salaire", "prime", "indemnite",
@@ -190,10 +225,15 @@ _TOPICS: tuple[dict[str, Any], ...] = (
 
 def _matching_topics(query: str) -> list[dict[str, Any]]:
     folded = normalize(query)
-    return [
+    matched = [
         topic for topic in _TOPICS
         if any(normalize(trigger) in folded for trigger in topic["triggers"])
     ]
+    # Overtime/IHTS is a specific compensation topic. Do not also activate
+    # generic remuneration and working-time topics for the same phrase,
+    # otherwise their broad anchors reintroduce unrelated CGFP articles.
+    overtime = [topic for topic in matched if topic["key"] == "heures_supplementaires_ihts"]
+    return overtime or matched
 
 
 def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
