@@ -2,7 +2,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import tempfile, shutil, re, sys
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 archives = [p for p in ROOT.glob("*.zip") if p.is_file()]
 if len(archives) != 1:
     raise SystemExit(f"Expected one root ZIP archive, found {len(archives)}")
