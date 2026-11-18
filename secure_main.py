@@ -113,13 +113,27 @@ async def _piste_observed_send(self, request, *args, **kwargs):
     else:
         return await _original_async_client_send(self, request, *args, **kwargs)
     _piste_last_upstream.clear()
-    _piste_last_upstream.update({"stage": stage, "status": None, "error_type": None})
+    _piste_last_upstream.update({"stage": stage, "status": None, "error_type": None, "oauth_error": None})
     try:
         response = await _original_async_client_send(self, request, *args, **kwargs)
     except Exception as exc:
         _piste_last_upstream["error_type"] = type(exc).__name__
         raise
     _piste_last_upstream["status"] = int(response.status_code)
+    if stage == "oauth" and response.status_code >= 400:
+        # Expose only a standard OAuth error code from a strict allowlist.
+        # Never expose error_description, response bodies, or credential data.
+        try:
+            payload = response.json()
+            oauth_error = payload.get("error") if isinstance(payload, dict) else None
+            if oauth_error in {
+                "invalid_request", "invalid_client", "invalid_grant",
+                "unauthorized_client", "unsupported_grant_type", "invalid_scope",
+                "access_denied", "temporarily_unavailable", "server_error",
+            }:
+                _piste_last_upstream["oauth_error"] = oauth_error
+        except Exception:
+            pass
     return response
 
 # The connector uses httpx.AsyncClient; this wrapper does not alter requests.
@@ -193,14 +207,15 @@ async def _dikevia_piste_health():
         upstream_error_type = _piste_last_upstream.get("error_type")
         # Only controlled metadata is logged and returned.
         _piste_logger.warning(
-            "PISTE health check failed: code=%s stage=%s status=%s upstream_error_type=%s exception_type=%s",
-            diagnostic_code, stage or "unknown", status, upstream_error_type, type(exc).__name__,
+            "PISTE health check failed: code=%s stage=%s status=%s oauth_error=%s upstream_error_type=%s exception_type=%s",
+            diagnostic_code, stage or "unknown", status, _piste_last_upstream.get("oauth_error"), upstream_error_type, type(exc).__name__,
         )
         return JSONResponse(
             {"status": "unavailable", "environment": legifrance_connector.environment,
              "diagnostic_code": diagnostic_code,
              "diagnostic_stage": stage, "upstream_status": status,
              "upstream_error_type": upstream_error_type,
+             "upstream_oauth_error": _piste_last_upstream.get("oauth_error"),
              "message": "Authentification ou point de contrôle Légifrance indisponible."},
             status_code=503,
             headers={"Cache-Control": "no-store"},
