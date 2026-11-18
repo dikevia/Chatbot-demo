@@ -23,6 +23,11 @@ jobs:
       - name: Test conservative FPT scope filter
         run: python -m unittest tests.test_fpt_scope -v
 
+      - name: Verify FPT scope guard is connected to search and Gemini
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python dikevia-chatbot-demo:test -c 'import sys; sys.path.insert(0, "/app/backend"); from app.fpt_scope import classify_public_service_scope as classify; assert classify({"title":"Fonction publique territoriale","full_text":"Collectivités territoriales"})["analysis_eligible"] is True; assert classify({"title":"Fonction publique hospitalière","full_text":"Établissements publics de santé"})["analysis_eligible"] is False; from pathlib import Path; o=Path("/app/backend/app/orchestrator.py").read_text(); a=Path("/app/backend/app/ai_provider.py").read_text(); f=Path("/app/frontend/app.js").read_text(); assert "analysis_eligible" in o and "LEGIFRANCE_LODA" in o; assert "un texte FPE ou FPH n\x27est pas une règle FPT" in a; assert "s.analysis_eligible !== false" in f; print("OK : FPE/FPH et périmètres incertains exclus de l\x27analyse IA, sources FPT conservées.")'
+
       - name: Verify the legal-search fallback patch is present
         shell: bash
         run: |
