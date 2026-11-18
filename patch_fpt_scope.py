@@ -73,6 +73,7 @@ ai_path = ROOT / "backend/app/ai_provider.py"
 ai_source = ai_path.read_text(encoding="utf-8")
 prompt_anchor = "- Respecte strictement leur provenance, leur statut et leur temporalité ; ne déduis jamais leur applicabilité de leur seule présence."
 prompt_replacement = prompt_anchor + "\n- Pour les textes réglementaires hors CGFP, vérifie le champ de la fonction publique : un texte FPE ou FPH n'est pas une règle FPT. Les textes de périmètre incertain sont des pistes à vérifier et ne doivent pas fonder une conclusion."
+prompt_replacement += "\n- Pour une question d'heures supplémentaires/IHTS en FPT, examine ensemble le décret n° 91-875 (notamment sa règle de délibération locale), le décret n° 2002-60 comme régime de référence et le décret n° 2001-623 pour le temps de travail. Le décret n° 2002-60 pris isolément ne suffit pas à établir que l'agent, son cadre d'emplois ou son emploi ouvre droit au paiement : vérifie la délibération de la collectivité, les fonctions/grades éligibles, la demande de l'autorité, le décompte des heures et l'éventuelle compensation en repos."
 if prompt_anchor in ai_source:
     ai_source = ai_source.replace(prompt_anchor, prompt_replacement, 1)
 elif "un texte FPE ou FPH n'est pas une règle FPT" not in ai_source:
