@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Receive, Scope, Send
+import httpx
 
 
 def _required_secret(name: str, minimum: int = 1) -> str:
@@ -98,6 +99,52 @@ from app.legifrance import connector as legifrance_connector, LegifranceUnavaila
 
 _piste_logger = logging.getLogger("dikevia.piste")
 
+# Observe only PISTE host role, HTTP status and exception class. Never record
+# request headers, bodies, URLs, tokens or credential values.
+_piste_last_upstream: dict[str, object] = {}
+_original_async_client_send = httpx.AsyncClient.send
+
+async def _piste_observed_send(self, request, *args, **kwargs):
+    host = request.url.host.lower()
+    if host in {"sandbox-oauth.piste.gouv.fr", "oauth.piste.gouv.fr"}:
+        stage = "oauth"
+    elif host in {"sandbox-api.piste.gouv.fr", "api.piste.gouv.fr"}:
+        stage = "legifrance_api"
+    else:
+        return await _original_async_client_send(self, request, *args, **kwargs)
+    _piste_last_upstream.clear()
+    _piste_last_upstream.update({"stage": stage, "status": None, "error_type": None})
+    try:
+        response = await _original_async_client_send(self, request, *args, **kwargs)
+    except Exception as exc:
+        _piste_last_upstream["error_type"] = type(exc).__name__
+        raise
+    _piste_last_upstream["status"] = int(response.status_code)
+    return response
+
+# The connector uses httpx.AsyncClient; this wrapper does not alter requests.
+httpx.AsyncClient.send = _piste_observed_send
+
+def _piste_observed_failure_code() -> str:
+    stage = _piste_last_upstream.get("stage")
+    status = _piste_last_upstream.get("status")
+    error_type = str(_piste_last_upstream.get("error_type") or "").lower()
+    if status in (401, 403):
+        return "authentication_rejected"
+    if status == 404:
+        return "endpoint_not_found"
+    if isinstance(status, int) and status >= 500:
+        return "upstream_server_error"
+    if "timeout" in error_type:
+        return "network_timeout"
+    if any(token in error_type for token in ("connect", "network", "dns", "socket")):
+        return "network_connection_error"
+    if isinstance(status, int) and status >= 400:
+        return "upstream_http_error"
+    if stage:
+        return "connector_processing_error"
+    return "no_upstream_request"
+
 
 def _piste_diagnostic_code(exc: BaseException) -> str:
     """Return a safe, non-secret category for a failed upstream request."""
@@ -129,6 +176,7 @@ async def _dikevia_piste_health():
             status_code=503,
             headers={"Cache-Control": "no-store"},
         )
+    _piste_last_upstream.clear()
     try:
         await legifrance_connector.ping()
         return JSONResponse(
@@ -138,15 +186,21 @@ async def _dikevia_piste_health():
         )
     except LegifranceUnavailable as exc:
         diagnostic_code = _piste_diagnostic_code(exc)
-        # Log only a controlled category and exception class: never upstream
-        # messages, request URLs, headers, tokens, or credential values.
+        if diagnostic_code == "connector_error":
+            diagnostic_code = _piste_observed_failure_code()
+        stage = _piste_last_upstream.get("stage")
+        status = _piste_last_upstream.get("status")
+        upstream_error_type = _piste_last_upstream.get("error_type")
+        # Only controlled metadata is logged and returned.
         _piste_logger.warning(
-            "PISTE health check failed: code=%s exception_type=%s",
-            diagnostic_code, type(exc).__name__,
+            "PISTE health check failed: code=%s stage=%s status=%s upstream_error_type=%s exception_type=%s",
+            diagnostic_code, stage or "unknown", status, upstream_error_type, type(exc).__name__,
         )
         return JSONResponse(
             {"status": "unavailable", "environment": legifrance_connector.environment,
              "diagnostic_code": diagnostic_code,
+             "diagnostic_stage": stage, "upstream_status": status,
+             "upstream_error_type": upstream_error_type,
              "message": "Authentification ou point de contrôle Légifrance indisponible."},
             status_code=503,
             headers={"Cache-Control": "no-store"},
