@@ -36,6 +36,15 @@ class FPTScopeTests(unittest.TestCase):
         self.assertEqual(result["scope"], "GENERAL_PUBLIC_SERVICE")
         self.assertTrue(result["analysis_eligible"])
 
+    def test_ihts_reference_decree_is_eligible_with_local_checks_required(self):
+        result = classify_public_service_scope({
+            "title": "Décret n° 2002-60 relatif aux indemnités horaires pour travaux supplémentaires",
+            "full_text": "Indemnités horaires pour travaux supplémentaires (IHTS)."
+        })
+        self.assertEqual(result["scope"], "FPT_REFERENCE")
+        self.assertTrue(result["analysis_eligible"])
+        self.assertIn("délibération locale", result["evidence"][0])
+
     def test_ambiguous_scope_fails_closed(self):
         result = classify_public_service_scope({
             "title": "Modalités d'application d'une mesure",
