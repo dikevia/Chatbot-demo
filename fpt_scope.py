@@ -26,10 +26,10 @@ _FPT_MARKERS = (
     "communes et leurs etablissements publics",
     "departements et regions",
     "maires et presidents d etablissements publics",
-    "decret 88-145",
-    "decret 87-602",
-    "decret 89-677",
-    "decret 91-298",
+    "decret 88-145", "decret n 88 145",
+    "decret 87-602", "decret n 87 602",
+    "decret 89-677", "decret n 89 677",
+    "decret 91-298", "decret n 91 298",
 )
 
 _FPH_MARKERS = (
