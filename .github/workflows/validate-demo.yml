@@ -17,6 +17,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Inspect packaged orchestrator integration points
+        run: |
+          python - <<'PY'
+          import pathlib, zipfile
+          zpath = next(pathlib.Path('.').glob('*.zip'))
+          with zipfile.ZipFile(zpath) as z:
+            for name in ('Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/orchestrator.py', 'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/ai_provider.py'):
+              print('\\n===== '+name+' =====')
+              data = z.read(name).decode('utf-8')
+              print(data[:45000])
+          PY
+
       - name: Build Docker image (no publication)
         run: docker build --tag dikevia-chatbot-demo:test .
 
