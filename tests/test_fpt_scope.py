@@ -69,6 +69,29 @@ class FPTScopeTests(unittest.TestCase):
             with self.subTest(source=source["title"]):
                 self.assertTrue(is_ihts_relevant_source(question, source))
 
+    def test_ihts_filter_rejects_generic_cpf_and_union_hour_credits(self):
+        question = "On ne me paie pas mes heures supplémentaires"
+        unrelated = [
+            {"title": "CGFP R422-96", "article": "R422-96", "excerpt": "Le crédit d'heures supplémentaires est limité à 150 heures pour prévenir une situation d'inaptitude."},
+            {"title": "CGFP L422-15", "article": "L422-15", "excerpt": "L'agent peut bénéficier d'un crédit d'heures supplémentaires pour son évolution professionnelle."},
+            {"title": "CGFP R214-28", "article": "R214-28", "excerpt": "Le crédit global de temps syndical comprend des heures supplémentaires par mois."},
+            {"title": "CGFP R214-33", "article": "R214-33", "excerpt": "Crédits d'heures syndicales et compensation financière."},
+        ]
+        for source in unrelated:
+            with self.subTest(source=source["title"]):
+                self.assertFalse(is_ihts_relevant_source(question, source))
+
+    def test_ihts_filter_requires_specific_pay_or_ihts_regime(self):
+        question = "On ne me paie pas mes heures supplémentaires"
+        relevant = [
+            {"title": "Décret n° 2002-60", "excerpt": "Indemnités horaires pour travaux supplémentaires (IHTS)."},
+            {"title": "Décret n° 91-875", "excerpt": "Indemnités horaires pour travaux supplémentaires."},
+            {"title": "Décret n° 2001-623", "excerpt": "Organisation du temps de travail et renvoi au décret n° 2002-60."},
+        ]
+        for source in relevant:
+            with self.subTest(source=source["title"]):
+                self.assertTrue(is_ihts_relevant_source(question, source))
+
     def test_topic_filter_does_not_change_other_legal_questions(self):
         source = {"title": "CGFP L134-5", "full_text": "Protection fonctionnelle."}
         self.assertTrue(is_ihts_relevant_source("Mon chef me menace", source))
