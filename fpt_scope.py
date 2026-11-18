@@ -82,7 +82,7 @@ def classify_public_service_scope(source: dict[str, Any]) -> dict[str, Any]:
     # used through the territorial indemnity framework. The prompt still
     # requires decree n° 91-875 and the local deliberation to be checked.
     is_ihts_reference = (
-        "decret 2002 60" in corpus
+        "2002 60" in corpus
         and "indemnites horaires pour travaux supplementaires" in corpus
     )
     if is_ihts_reference:
