@@ -144,6 +144,31 @@ _TOPICS: tuple[dict[str, Any], ...] = (
         "exclude_unless_anchor": (),
     },
     {
+        "key": "charge_travail_conditions_travail",
+        "triggers": (
+            "charge de travail", "surcharge de travail", "trop de travail",
+            "plus de travail que mes collegues", "plus de travail que les collegues",
+            "repartition du travail", "taches supplementaires", "plein de travail",
+            "inegalite de charge", "menace de me donner du travail",
+        ),
+        "expansion": (
+            "charge de travail surcharge répartition des tâches organisation du travail "
+            "conditions de travail risques psychosociaux santé physique mentale prévention "
+            "harcèlement moral agissements répétés dégradation conditions de travail"
+        ),
+        "anchors": (
+            "charge de travail", "conditions de travail", "sante physique ou mentale",
+            "prevention des risques professionnels", "risques psychosociaux",
+            "harcelement moral", "dignite", "avenir professionnel",
+        ),
+        "boosts": {
+            "charge de travail": 12.0, "conditions de travail": 7.0,
+            "prevention des risques professionnels": 6.0,
+            "harcelement moral": 5.0,
+        },
+        "exclude_unless_anchor": (),
+    },
+    {
         "key": "agents_contractuels",
         "triggers": (
             "agent contractuel", "contractuel", "cdd", "cdi", "renouvellement de contrat",
@@ -254,6 +279,16 @@ def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
             "matched_concepts": unique_anchors[:6],
             "relevance_label": "Fondement à examiner en priorité" if score >= 10 else "Disposition complémentaire à examiner",
         })
+
+    # L134-10 ne concerne que des catégories précises d'agents publics
+    # (notamment préfets, administration pénitentiaire et douanes). Ne pas le
+    # présenter comme piste prioritaire aux autres agents.
+    special_categories = (
+        "prefet", "sous-prefet", "administration penitentiaire",
+        "agent penitentiaire", "douanes", "douanier",
+    )
+    if not any(normalize(term) in normalize(query) for term in special_categories):
+        ranked = [item for item in ranked if item.get("article") != "L134-10"]
 
     ranked.sort(key=lambda item: (-float(item["score"]), item["article"]))
     for index, item in enumerate(ranked):
