@@ -1,4 +1,4 @@
-name: Inspect packaged chatbot sources
+name: Inspect selected-source backend flow
 on:
   push:
     branches:
@@ -8,21 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Dump source files needed for conversation and selected documents
+      - name: Dump orchestrator, CGFP lookup, frontend styles and tests
         run: |
           python - <<'PY'
           import zipfile, pathlib
           zpath = next(pathlib.Path('.').glob('*.zip'))
-          wanted = [
-            'Dikevia_Chatbot_V1_Kit_Developpeur/frontend/app.js',
-            'Dikevia_Chatbot_V1_Kit_Developpeur/frontend/chat-logic.js',
-            'Dikevia_Chatbot_V1_Kit_Developpeur/frontend/index.html',
-            'Dikevia_Chatbot_V1_Kit_Developpeur/backend/dev_main.py',
-            'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/schemas.py',
-            'Dikevia_Chatbot_V1_Kit_Developpeur/backend/app/ai_provider.py',
-          ]
           with zipfile.ZipFile(zpath) as z:
-            for n in wanted:
-              print('\\n===== '+n+' =====')
-              print(z.read(n).decode('utf-8'))
+            for n in z.namelist():
+              if n.endswith(('.py','.js','.css','.html')) and any(k in n.lower() for k in ('orchestrator.py','cgfp.py','app.css','test_orchestrator','test_ai_provider','test_chat')):
+                print('\\n===== '+n+' =====')
+                try: print(z.read(n).decode('utf-8'))
+                except Exception as e: print('READ ERROR',e)
           PY
