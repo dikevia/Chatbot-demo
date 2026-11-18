@@ -148,8 +148,14 @@ async def _dikevia_general_ai_orientation(
             sources=[],
             conversation_history=history,
         )
-    except AIProviderUnavailable:
-        logger.warning("Fournisseur IA indisponible pendant l'orientation générale.")
+    except AIProviderUnavailable as exc:
+        # Keep the secret out of logs: expose only the sanitized provider error
+        # so authentication, model and endpoint failures can be distinguished.
+        detail = str(exc).replace(settings.ai_api_key or "", "[secret]")[:500]
+        logger.warning(
+            "Fournisseur IA indisponible pendant l'orientation générale (%s): %s",
+            type(exc).__name__, detail or "aucun détail transmis par le fournisseur",
+        )
         return None
     content = result.content if isinstance(result, AIAnalysisResult) else result
     if not isinstance(content, str) or not content.strip():
