@@ -123,3 +123,32 @@ def classify_public_service_scope(source: dict[str, Any]) -> dict[str, Any]:
         "evidence": general_hits[:2],
         "analysis_eligible": False,
     }
+
+_IHTS_QUERY_MARKERS = (
+    "heures supplementaires", "heure supplementaire", "heures sup",
+    "heures supp", "heures supolementaires", "heure supolementaire",
+    "ihts", "travaux supplementaires",
+)
+
+_IHTS_SOURCE_MARKERS = (
+    "heures supplementaires",
+    "indemnites horaires pour travaux supplementaires",
+    "travaux supplementaires",
+    "repos compensateur",
+    "cycle de travail",
+    "2002 60",
+    "91 875",
+    "2001 623",
+)
+
+
+def is_ihts_relevant_source(question: str, source: dict[str, Any]) -> bool:
+    """Reject unrelated Légifrance hits only when the user's question is about IHTS."""
+    folded_question = _fold(str(question or ""))
+    if not any(_fold(marker) in folded_question for marker in _IHTS_QUERY_MARKERS):
+        return True
+
+    title = str(source.get("title") or "")
+    text = str(source.get("full_text") or source.get("text") or source.get("excerpt") or "")
+    corpus = _fold((title + " " + text)[:500_000])
+    return any(_fold(marker) in corpus for marker in _IHTS_SOURCE_MARKERS)
