@@ -136,9 +136,9 @@ _IHTS_SOURCE_MARKERS = (
     "travaux supplementaires",
     "repos compensateur",
     "cycle de travail",
-    "decret 2002 60",
-    "decret 91 875",
-    "decret 2001 623",
+    "2002 60",
+    "91 875",
+    "2001 623",
 )
 
 
