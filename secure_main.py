@@ -142,8 +142,14 @@ async def _piste_observed_send(self, request, *args, **kwargs):
                 import re
                 for key in ("code", "errorCode", "error_code", "type", "error"):
                     value = payload.get(key)
+                    # Upstream APIs may encode machine error codes as strings
+                    # or integers. Accept only bounded scalar codes; never
+                    # retain nested objects, free-form messages or details.
                     if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.:-]{1,64}", value):
                         _piste_last_upstream["api_error_code"] = value
+                        break
+                    if type(value) is int and 0 <= value <= 999999:
+                        _piste_last_upstream["api_error_code"] = str(value)
                         break
         except Exception:
             pass
