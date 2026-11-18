@@ -105,7 +105,7 @@ class LegalOrchestrator:
                     if old not in text: raise SystemExit("dev_main request model anchor not found")
                     text = text.replace(old, new, 1)
                     old = 'request, organization_id="CHATBOT_V1_LOCAL_ONLY", conn=None, conversation_history=history,'
-                    new = old + "\\n                selected_source_keys=payload.selected_source_keys,"
+                    new = old + "\n                selected_source_keys=payload.selected_source_keys,"
                     if old not in text: raise SystemExit("dev_main orchestrator call anchor not found")
                     text = text.replace(old, new, 1)
 
