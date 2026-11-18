@@ -88,6 +88,38 @@ class BasicAuthGate:
 # including the home page, the application health endpoint and the chatbot API.
 from dev_main import app as chatbot_app  # noqa: E402
 
+# Diagnostic PISTE endpoint: protected by BasicAuthGate like every app route.
+# It reveals only whether OAuth + the official Légifrance ping work; never IDs,
+# tokens, secrets, response bodies, or upstream exception details.
+from fastapi.responses import JSONResponse  # noqa: E402
+from app.legifrance import connector as legifrance_connector, LegifranceUnavailable  # noqa: E402
+
+
+async def _dikevia_piste_health():
+    if not legifrance_connector.configured:
+        return JSONResponse(
+            {"status": "not_configured", "environment": legifrance_connector.environment},
+            status_code=503,
+            headers={"Cache-Control": "no-store"},
+        )
+    try:
+        await legifrance_connector.ping()
+        return JSONResponse(
+            {"status": "connected", "oauth": "ok", "api": "ok",
+             "environment": legifrance_connector.environment},
+            headers={"Cache-Control": "no-store"},
+        )
+    except LegifranceUnavailable:
+        return JSONResponse(
+            {"status": "unavailable", "environment": legifrance_connector.environment,
+             "message": "Authentification ou point de contrôle Légifrance indisponible."},
+            status_code=503,
+            headers={"Cache-Control": "no-store"},
+        )
+
+
+chatbot_app.add_api_route("/_piste-health", _dikevia_piste_health, methods=["GET"], include_in_schema=False)
+
 # Le kit sert son index.html à la racine, avec app.js/app.css/config.js
 # référencés par des chemins relatifs. Le montage initial /static ne les
 # rendait pas accessibles et l'interface apparaissait sans style/fonctionnement.
