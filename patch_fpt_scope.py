@@ -61,7 +61,7 @@ elif 's.get("source_type") != "LEGIFRANCE_LODA" or s.get("analysis_eligible") is
 case_law_anchor = '''        if case_law_sources:
             missing.insert(0, "Les résultats CETAT sont des métadonnées/extraits de recherche ; le texte intégral des décisions n'a pas été récupéré ni contrôlé.")
 '''
-scope_warning = case_law_anchor + '''        if any(s.get("source_type") == "LEGIFRANCE_LODA" and s.get("analysis_eligible") is not True for s in sources):
+scope_warning = case_law_anchor + '''        if any(s.get("source_type") == "LEGIFRANCE_LODA" and s.get("public_service_scope") in {"FPH", "FPE", "SCOPE_TO_VERIFY"} for s in sources):
             missing.insert(0, "Certains textes réglementaires repérés ne sont pas clairement applicables à la fonction publique territoriale ; ils restent affichés comme pistes et sont exclus de l'analyse IA.")
         if any(s.get("source_type") == "LEGIFRANCE_LODA" and s.get("topic_relevant") is False for s in sources):
             missing.insert(0, "Certains résultats Légifrance sont sans rapport direct avec les heures supplémentaires ; ils restent écartés de la sélection et de l'analyse IA.")
