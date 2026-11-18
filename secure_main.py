@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import logging
 import os
 from pathlib import Path
 from starlette.staticfiles import StaticFiles
@@ -95,6 +96,32 @@ from fastapi.responses import JSONResponse  # noqa: E402
 from app.legifrance import connector as legifrance_connector, LegifranceUnavailable  # noqa: E402
 
 
+_piste_logger = logging.getLogger("dikevia.piste")
+
+
+def _piste_diagnostic_code(exc: BaseException) -> str:
+    """Return a safe, non-secret category for a failed upstream request."""
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        response = getattr(current, "response", None)
+        status = getattr(response, "status_code", None) or getattr(current, "status_code", None)
+        if status in (401, 403):
+            return "authentication_rejected"
+        if status == 404:
+            return "endpoint_not_found"
+        if isinstance(status, int) and status >= 500:
+            return "upstream_server_error"
+        name = type(current).__name__.lower()
+        if "timeout" in name:
+            return "network_timeout"
+        if any(token in name for token in ("connect", "network", "dns", "socket")):
+            return "network_connection_error"
+        current = current.__cause__ or current.__context__
+    return "connector_error"
+
+
 async def _dikevia_piste_health():
     if not legifrance_connector.configured:
         return JSONResponse(
@@ -109,9 +136,17 @@ async def _dikevia_piste_health():
              "environment": legifrance_connector.environment},
             headers={"Cache-Control": "no-store"},
         )
-    except LegifranceUnavailable:
+    except LegifranceUnavailable as exc:
+        diagnostic_code = _piste_diagnostic_code(exc)
+        # Log only a controlled category and exception class: never upstream
+        # messages, request URLs, headers, tokens, or credential values.
+        _piste_logger.warning(
+            "PISTE health check failed: code=%s exception_type=%s",
+            diagnostic_code, type(exc).__name__,
+        )
         return JSONResponse(
             {"status": "unavailable", "environment": legifrance_connector.environment,
+             "diagnostic_code": diagnostic_code,
              "message": "Authentification ou point de contrôle Légifrance indisponible."},
             status_code=503,
             headers={"Cache-Control": "no-store"},
