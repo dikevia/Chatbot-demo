@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
 
 
@@ -177,5 +177,5 @@ class LegifranceClient:
         if not text_id.startswith("LEGITEXT"):
             raise LegifranceError("Identifiant de texte Légifrance invalide.")
         at = at or date.today()
-        timestamp_ms = int(time.mktime(at.timetuple()) * 1000)
+        timestamp_ms = int(datetime.combine(at, datetime.min.time(), tzinfo=timezone.utc).timestamp() * 1000)
         return self._api("consult/legiPart", {"date": timestamp_ms, "textId": text_id})
