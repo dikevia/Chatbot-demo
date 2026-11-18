@@ -225,10 +225,15 @@ _TOPICS: tuple[dict[str, Any], ...] = (
 
 def _matching_topics(query: str) -> list[dict[str, Any]]:
     folded = normalize(query)
-    return [
+    matched = [
         topic for topic in _TOPICS
         if any(normalize(trigger) in folded for trigger in topic["triggers"])
     ]
+    # Overtime/IHTS is a specific compensation topic. Do not also activate
+    # generic remuneration and working-time topics for the same phrase,
+    # otherwise their broad anchors reintroduce unrelated CGFP articles.
+    overtime = [topic for topic in matched if topic["key"] == "heures_supplementaires_ihts"]
+    return overtime or matched
 
 
 def search_cgfp(query: str, limit: int = 8) -> dict[str, Any]:
