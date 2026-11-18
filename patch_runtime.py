@@ -53,6 +53,18 @@ new_gate = '''        # A validated local CGFP snapshot is useful documentary ma
 '''
 if old_gate in source:
     source = source.replace(old_gate, new_gate, 1)
+elif "selected_sources" in source and "if not selected_sources and not has_cgfp_snapshot" not in source:
+    selected_gate = '''        if not selected_sources and not any(s.get("source_type") in {"LEGIFRANCE_API", "LEGIFRANCE_LODA"} for s in sources) and not usable_permanent and not usable_local:
+'''
+    selected_new_gate = '''        has_cgfp_snapshot = any(
+            s.get("source_type") == "CGFP_SNAPSHOT"
+            and (s.get("citation_integrity") or {}).get("valid") is True
+            for s in sources
+        )
+        if not selected_sources and not has_cgfp_snapshot and not any(s.get("source_type") in {"LEGIFRANCE_API", "LEGIFRANCE_LODA"} for s in sources) and not usable_permanent and not usable_local:
+'''
+    if selected_gate in source:
+        source = source.replace(selected_gate, selected_new_gate, 1)
 elif "has_cgfp_snapshot = any(" not in source:
     raise RuntimeError("Condition de refus sans source introuvable ou déjà modifiée de façon inattendue.")
 
@@ -170,6 +182,13 @@ async def _dikevia_general_ai_orientation(
 class LegalOrchestrator:'''
 if helper_anchor in source:
     source = source.replace(helper_anchor, helper, 1)
+elif "def source_selection_key(source: dict) -> str:" in source and "_dikevia_general_ai_orientation" not in source:
+    helper_prefix = helper.split("class LegalOrchestrator:")[0]
+    source = source.replace(
+        "logger = logging.getLogger(__name__)\\n\\n\\ndef source_selection_key(source: dict) -> str:",
+        helper_prefix + "def source_selection_key(source: dict) -> str:",
+        1,
+    )
 elif "_dikevia_general_ai_orientation" not in source:
     raise RuntimeError("Point d'insertion de l'orientation IA introuvable.")
 
@@ -210,6 +229,20 @@ new_no_date = '''        ai_triage_mode = parsed_date is None
         else:'''
 if old_no_date in source:
     source = source.replace(old_no_date, new_no_date, 1)
+elif "if parsed_date is None and not selected_sources:" in source:
+    selected_no_date = '''        ai_triage_mode = parsed_date is None and not selected_sources
+        if ai_triage_mode:
+            ai_answer = await _dikevia_general_ai_orientation(
+                current_question, request.employer, None, history
+            )
+            if not ai_answer:
+                missing.insert(0, "Analyse juridique contextualisée suspendue : préciser la date des faits. Sans date, Dikévia peut seulement fournir une orientation générale non juridique si le fournisseur IA est configuré.")
+        else:'''
+    selected_old = '''        if parsed_date is None and not selected_sources:
+            ai_answer = None
+            missing.insert(0, "Analyse juridique contextualisée suspendue : préciser la date des faits pour vérifier la version applicable. La date du jour n'est utilisée que pour le repérage documentaire.")
+        else:'''
+    source = source.replace(selected_old, selected_no_date, 1)
 elif "ai_triage_mode = parsed_date is None" not in source:
     raise RuntimeError("Bloc IA sans date des faits introuvable.")
 
