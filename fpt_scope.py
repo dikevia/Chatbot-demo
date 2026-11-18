@@ -131,24 +131,36 @@ _IHTS_QUERY_MARKERS = (
 )
 
 _IHTS_SOURCE_MARKERS = (
-    "heures supplementaires",
     "indemnites horaires pour travaux supplementaires",
-    "travaux supplementaires",
-    "repos compensateur",
-    "cycle de travail",
+    "indemnite horaire pour travaux supplementaires",
+    "indemnites horaires de travaux supplementaires",
+    "ihts",
     "2002 60",
     "91 875",
     "2001 623",
+    "repos compensateur des heures supplementaires",
+    "repos compensateur au titre des heures supplementaires",
 )
 
 
 def is_ihts_relevant_source(question: str, source: dict[str, Any]) -> bool:
-    """Reject unrelated Légifrance hits only when the user's question is about IHTS."""
+    """Reject generic hour credits and unrelated CGFP hits for IHTS questions."""
     folded_question = _fold(str(question or ""))
     if not any(_fold(marker) in folded_question for marker in _IHTS_QUERY_MARKERS):
         return True
 
     title = str(source.get("title") or "")
+    article = str(source.get("article") or source.get("article_id") or "")
     text = str(source.get("full_text") or source.get("text") or source.get("excerpt") or "")
-    corpus = _fold((title + " " + text)[:500_000])
+    corpus = _fold((title + " " + article + " " + text)[:500_000])
+
+    # Explicitly exclude unrelated CGFP provisions that use "heures
+    # supplémentaires" to describe CPF credits or union time credits.
+    excluded_articles = ("r422 96", "l422 15", "r214 28", "r214 32", "r214 33")
+    if any(_fold(code) in corpus for code in excluded_articles):
+        return False
+
+    # Generic mentions of extra hours are not enough: require the IHTS
+    # terminology or one of the implementing/reference decrees.
     return any(_fold(marker) in corpus for marker in _IHTS_SOURCE_MARKERS)
+
