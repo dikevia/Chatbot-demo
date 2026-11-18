@@ -63,7 +63,7 @@ class FPTScopeTests(unittest.TestCase):
             {"title": "Décret n° 2002-60", "full_text": "Indemnités horaires pour travaux supplémentaires (IHTS)."},
             {"title": "Décret n° 91-875", "full_text": "Indemnités horaires pour travaux supplémentaires."},
             {"title": "Décret n° 2001-623", "full_text": "Organisation des cycles de travail."},
-            {"title": "Repos compensateur", "full_text": "Les heures supplémentaires ouvrent droit à repos compensateur."},
+            {"title": "Repos compensateur des heures supplémentaires", "full_text": "Repos compensateur des heures supplémentaires effectuées."},
         ]
         for source in relevant:
             with self.subTest(source=source["title"]):
