@@ -185,7 +185,7 @@ if helper_anchor in source:
 elif "def source_selection_key(source: dict) -> str:" in source and "_dikevia_general_ai_orientation" not in source:
     helper_prefix = helper.split("class LegalOrchestrator:")[0]
     source = source.replace(
-        "logger = logging.getLogger(__name__)\\n\\n\\ndef source_selection_key(source: dict) -> str:",
+        "logger = logging.getLogger(__name__)\n\n\ndef source_selection_key(source: dict) -> str:",
         helper_prefix + "def source_selection_key(source: dict) -> str:",
         1,
     )
