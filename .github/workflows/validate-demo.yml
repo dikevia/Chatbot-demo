@@ -124,6 +124,21 @@ jobs:
           grep -q '"display": "standalone"' /tmp/dikevia-manifest.json
           echo "OK : interface web, installation PWA et fonctions vocales accessibles."
 
+          piste_status=$(curl --silent --output /tmp/dikevia-piste.json --write-out '%{http_code}' \
+            --user 'ci-demo:ci-only-password-12345678901234567890' http://127.0.0.1:8000/_piste-health || true)
+          if [ "$piste_status" != "503" ]; then
+            echo "Diagnostic PISTE inattendu sans identifiants Sandbox CI : HTTP $piste_status."
+            exit 1
+          fi
+          grep -q '"status":"not_configured"' /tmp/dikevia-piste.json
+          piste_anon_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8000/_piste-health || true)
+          if [ "$piste_anon_status" != "401" ]; then
+            echo "Le diagnostic PISTE doit rester protégé : HTTP $piste_anon_status."
+            exit 1
+          fi
+          echo "OK : diagnostic PISTE protégé, sans fuite de secret, état non configuré correctement signalé en CI."
+
           render_health_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8000/_render-health || true)
           if [ "$render_health_status" != "200" ]; then
